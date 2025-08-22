@@ -1,0 +1,45 @@
+﻿João Tenebroso Software Engineer
+
+
+Email: joao.tenebroso@darkmail.com Phone: +55 (71) 98765-4321 LinkedIn: linkedin.com/in/joaotenebroso GitHub: github.com/joaotenebroso City: Salvador, BA, Brazil
+Summary
+Experienced Software Engineer with a passion for building robust and scalable backend systems. Specialized in developing web applications and data processing pipelines.
+Experience
+* Lead Backend Engineer, Underworld Devs Inc. (Jan 2021 - Present)
+
+
+   * Led a team of 5 engineers in the development of a real-time data streaming platform.
+   * Architected and implemented microservices using Python and Docker.
+   * Improved system performance by 30% through code optimization and database query tuning.
+
+
+* Junior Software Developer, Abyss Systems (Jul 2018 - Dec 2020)
+
+
+   * Developed and maintained RESTful APIs for a mobile application.
+   * Wrote unit and integration tests to ensure code quality and stability.
+   * Contributed to feature development in an Agile environment.
+Education
+* M.S. in Computer Science, Federal University of Bahia (UFBA), 2020
+
+
+   * Thesis: "Optimizing Graph Database Queries for Social Networks"
+
+
+* B.S. in Computer Engineering, Salvador Institute of Technology (SIT), 2018
+
+
+   * GPA: 3.8/4.0
+Skills
+* Languages: Python, JavaScript, TypeScript, Go, C++
+* Frameworks: Flask, Django, Node.js, Express.js, React
+* Databases: PostgreSQL, MongoDB, Redis, Neo4j
+* Tools & Platforms: Docker, Kubernetes, AWS, Git, Jenkins, Terraform
+* Methodologies: Agile, Scrum, TDD (Test-Driven Development)
+Certifications
+* Certified Kubernetes Administrator (CKA), The Linux Foundation, 2022
+* AWS Certified Solutions Architect - Associate, Amazon Web Services, 2021
+Languages
+* Portuguese: Native
+* English: Fluent
+* Spanish: Intermediate
