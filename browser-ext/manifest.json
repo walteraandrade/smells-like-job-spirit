@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "name": "CV Autofill Assistant",
+  "name": "Smart CV Autofill Assistant",
   "version": "1.0.0",
   "description": "Automatically fill job application forms using your CV data",
 
@@ -11,13 +11,9 @@
     "http://localhost:8000/*",
     "https://*/*"
   ],
-
-  "background": {
   "background": {
     "service_worker": "background.js"
   },
-  },
-
   "content_scripts": [{
     "matches": ["<all_urls>"],
     "js": ["content/content.js"],
