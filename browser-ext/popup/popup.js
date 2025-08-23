@@ -20,7 +20,7 @@ class SmellsLikeJobSpiritPopup {
     });
 
     document.getElementById("file-input").addEventListener("change", (e) => {
-      if (e.target.files.lenght > 0) {
+      if (e.target.files.length > 0) {
         this.uploadCV(e.target.files[0]);
       }
     });
