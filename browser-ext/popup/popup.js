@@ -48,7 +48,7 @@ class SmellsLikeJobSpiritPopup {
     document
       .getElementById("detect-forms-btn")
       .addEventListener("click", () => {
-        this.detectForms();
+        this.checkPageForForms();
       });
 
     document.getElementById("auto-fill-btn").addEventListener("click", () => {
@@ -65,11 +65,12 @@ class SmellsLikeJobSpiritPopup {
       const response = await this.sendMessage({ action: "getCVData" });
 
       if (response.success && response.data) {
-        this.cvData.data;
+        this.cvData = data;
         this.showCVLoaded();
       }
     } catch (error) {
       console.error("Error loading CV data:", error);
+      this.showCVNotLoaded();
     }
   }
 
@@ -77,10 +78,23 @@ class SmellsLikeJobSpiritPopup {
     this.showLoading(true);
     this.hideError();
 
+    const dataUrl = await new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = () =>
+        reject(reader.error || new Error("Failed to read file"));
+      reader.readAsDataURL(file);
+    });
+
     try {
       const response = await this.sendMessage({
         action: "parseCV",
-        file,
+        file: {
+          name: file.name,
+          type: file.type,
+          size: file.size,
+          dataUrl,
+        },
       });
 
       if (response.success) {
@@ -88,30 +102,39 @@ class SmellsLikeJobSpiritPopup {
         this.showCVLoaded();
         this.showSuccess("CV uploaded and parsed successfully");
       } else {
-        this.showError("Failed to parse CV: " + response?.error?.message || response?.error || "Unknown error");
+        this.showError(
+          "Failed to parse CV: " +
+            (response?.error?.message || response?.error || "Unknown error")
+        );
       }
     } catch (error) {
       console.error("Error uploading CV: " + error.message);
       this.showError("Error uploading CV: " + error.message);
     } finally {
       this.showLoading(false);
+      document.getElementById("file-input").value = "";
     }
   }
 
   async detectForms() {
     try {
-        const [tab] = await chrome.tabs.query({
-            active: true,
-            currentWindow: true
-        });
+      const [tab] = await chrome.tabs.query({
+        active: true,
+        currentWindow: true,
+      });
 
-        await chrome.tabs.sendMessage(tab.id, {
-            action: 'detectForms'
-        });
+      if (!tab.id) {
+        this.showError("No active tab detected forms on");
+        return;
+      }
 
-        this.showSuccess('Form detection completed');
+      await chrome.sendTabMessage(tab.id, {
+        action: "detectForms",
+      });
+
+      this.showSuccess("Form detection completed");
     } catch (error) {
-        this.showError('Error detecting forms ', error.message)
+      this.showError("Error detecting forms: " + error.message);
     }
   }
 
@@ -127,7 +150,12 @@ class SmellsLikeJobSpiritPopup {
         currentWindow: true,
       });
 
-      await chrome.tabs.sendMessage(tab.id, {
+      if (!tab.id) {
+        this.showError("No active tab detected forms on");
+        return;
+      }
+
+      await chrome.sendTabMessage(tab.id, {
         action: "autoFill",
         cvData: this.cvData,
       });
@@ -142,7 +170,8 @@ class SmellsLikeJobSpiritPopup {
     try {
       await this.sendMessage({ action: "saveCVData", data: null });
       this.cvData = null;
-      this.showSuccess("CV data cleared successfully!");
+      this.showCVNotLoaded();
+      +this.showSuccess("CV data cleared successfully!");
     } catch (error) {
       this.showError("Error clearing data: " + error.message);
     }
@@ -219,7 +248,12 @@ class SmellsLikeJobSpiritPopup {
         currentWindow: true,
       });
 
-      const response = await chrome.tabs.sendMessage(tab.id, {
+      if (!tab.id) {
+        this.showError("No active tab detected forms on");
+        return;
+      }
+
+      const response = await chrome.sendTabMessage(tab.id, {
         action: "checkForForms",
       });
 
@@ -229,6 +263,22 @@ class SmellsLikeJobSpiritPopup {
     } catch (error) {
       console.error("Could not check for forms: ", error.message);
     }
+  }
+
+  sendTabMessage(tabId, message) {
+    return new Promise((resolve, reject) => {
+      try {
+        chrome.tabs.sendMessage(tabId, message, (response) => {
+          if (chrome.runtime.lastError) {
+            reject(new Error(chrome.runtime.lastError.message));
+          } else {
+            resolve(response);
+          }
+        });
+      } catch (e) {
+        reject(e);
+      }
+    });
   }
 
   sendMessage(message) {
