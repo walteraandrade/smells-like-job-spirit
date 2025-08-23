@@ -98,6 +98,23 @@ class SmellsLikeJobSpiritPopup {
     }
   }
 
+  async detectForms() {
+    try {
+        const [tab] = await chrome.tabs.query({
+            active: true,
+            currentWindow: true
+        });
+
+        await chrome.tabs.sendMessage(tab.id, {
+            action: 'detectForms'
+        });
+
+        this.showSuccess('Form detection completed');
+    } catch (error) {
+        this.showError('Error detecting forms ', error.message)
+    }
+  }
+
   async autoFill() {
     if (!this.cvData) {
       this.showError("Please upload your CV first");

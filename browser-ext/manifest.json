@@ -7,7 +7,9 @@
   "permissions": [
     "activeTab",
     "storage",
-    "tabs",
+    "tabs"
+  ],
+  "host_permissions": [
     "http://localhost:8000/*",
     "https://*/*"
   ],
@@ -33,7 +35,12 @@
   },
 
   "web_accessible_resources": [
-    "content/*"
+    {
+      "resources": [
+        "content/*"
+      ],
+      "matches": ["<all_urls>"]
+    }
   ]
 }
 
