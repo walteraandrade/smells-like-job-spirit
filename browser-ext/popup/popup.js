@@ -48,7 +48,7 @@ class SmellsLikeJobSpiritPopup {
     document
       .getElementById("detect-forms-btn")
       .addEventListener("click", () => {
-        this.detectFrom();
+        this.detectForms();
       });
 
     document.getElementById("auto-fill-btn").addEventListener("click", () => {
@@ -65,10 +65,10 @@ class SmellsLikeJobSpiritPopup {
       const response = await this.sendMessage({ action: "getCVData" });
 
       if (response.success && response.data) {
-        this.CVData = response.data;
+        this.cvData.data;
         this.showCVLoaded();
       }
-    } catch (e) {
+    } catch (error) {
       console.error("Error loading CV data:", error);
     }
   }
@@ -88,10 +88,11 @@ class SmellsLikeJobSpiritPopup {
         this.showCVLoaded();
         this.showSuccess("CV uploaded and parsed successfully");
       } else {
-        this.showError("Failed to parse CV: " + error.message);
+        this.showError("Failed to parse CV: " + response?.error?.message || response?.error || "Unknown error");
       }
     } catch (error) {
       console.error("Error uploading CV: " + error.message);
+      this.showError("Error uploading CV: " + error.message);
     } finally {
       this.showLoading(false);
     }
@@ -99,7 +100,7 @@ class SmellsLikeJobSpiritPopup {
 
   async autoFill() {
     if (!this.cvData) {
-      this.showError("Please uplaod your CV first");
+      this.showError("Please upload your CV first");
       return;
     }
 
@@ -114,7 +115,7 @@ class SmellsLikeJobSpiritPopup {
         cvData: this.cvData,
       });
 
-      this.showSucess("Auto-fill completed!");
+      this.showSuccess("Auto-fill completed!");
     } catch (error) {
       this.showError("Error auto-filling forms: " + error.message);
     }
@@ -124,7 +125,7 @@ class SmellsLikeJobSpiritPopup {
     try {
       await this.sendMessage({ action: "saveCVData", data: null });
       this.cvData = null;
-      this.showSucess("CV data cleared successfully!");
+      this.showSuccess("CV data cleared successfully!");
     } catch (error) {
       this.showError("Error clearing data: " + error.message);
     }
