@@ -40,7 +40,7 @@ class SmellsLikeJobSpiritPopup {
       e.preventDefault();
       uploadArea.classList.remove("dragover");
 
-      if ((e.target.files.lenght = 0)) {
+      if (e.target.files.lenght > 0) {
         this.uploadCV(e.dataTransfer.files[0]);
       }
     });
@@ -48,7 +48,7 @@ class SmellsLikeJobSpiritPopup {
     document
       .getElementById("detect-forms-btn")
       .addEventListener("click", () => {
-        this.checkPageForForms();
+        this.detectForms();
       });
 
     document.getElementById("auto-fill-btn").addEventListener("click", () => {
