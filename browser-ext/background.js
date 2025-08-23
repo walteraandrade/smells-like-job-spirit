@@ -60,11 +60,11 @@ class SmellsLikeJobSpiritBackground {
 
                 default:
                     sendResponse({ success: false, error: 'Unknown action' });
+                }
             } catch (error) {
                 console.error('Background script error:', error)
                 sendResponse({ success: false, error: error.message });
             }
-        }
     }
 
     async parseCV(file) {
