@@ -1,21 +1,5 @@
 const extensionAPI = typeof browser !== undefined ? browser : chrome;
 
-/** TODO: Test browser compatibility
-* Might need to use this function instead due to Chrome and Firefox Promise hanlding. One uses normal promises, the other callbacks.
-* async getCVData() {
-        if (typeof browser !== 'undefined') {
-            const result = await browser.storage.local.get(['cvData']);
-            return result.cvData || null;
-        } else {
-            return new Promise((resolve) => {
-                chrome.storage.local.get(['cvData'], (result) => {
-                    resolve(result.cvData || null);
-                });
-            });
-        }
-    }
-* **/
-
 class SmellsLikeJobSpiritBackground {
 	constructor() {
 		this.API_BASE_URL = "http://localhost:8000/api";
@@ -93,7 +77,7 @@ class SmellsLikeJobSpiritBackground {
 			throw new Error(`API error: ${response.status}`);
 		}
 
-		const parsedData = response.json();
+		const parsedData = await response.json();
 
 		await this.saveCVData(parsedData);
 
