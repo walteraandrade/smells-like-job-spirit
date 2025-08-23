@@ -25,7 +25,7 @@ class SmellsLikeJobSpiritPopup {
       }
     });
 
-    const dropArea = document.getElementById("upload-area");
+    const uploadArea = document.getElementById("upload-area");
 
     uploadArea.addEventListener("dragover", (e) => {
       e.preventDefault();
@@ -133,7 +133,7 @@ class SmellsLikeJobSpiritPopup {
   showCVLoaded() {
     const statusElement = document.getElementById("cv-status");
     statusElement.className = "cv-status loaded";
-    statusElement.className = "✅ CV loaded and ready to use";
+    statusElement.textContent = "✅ CV loaded and ready to use";
     statusElement.style.display = "block";
 
     this.showCVPreview();
@@ -147,8 +147,8 @@ class SmellsLikeJobSpiritPopup {
     statusElement.style.display = "none";
 
     document.getElementById("cv-preview").style.display = "none";
-    document.getElementById("detect-forms-btn").disabled = "true";
-    document.getElementById("auto-fill-btn").disabled = "true";
+    document.getElementById("detect-forms-btn").disabled = true;
+    document.getElementById("auto-fill-btn").disabled = true;
   }
 
   showCVPreview() {
@@ -194,7 +194,7 @@ class SmellsLikeJobSpiritPopup {
     document.getElementById("error-message").style.display = "none";
   }
 
-  async checkPageFormForms() {
+  async checkPageForForms() {
     try {
       const [tab] = await chrome.tabs.query({
         active: true,
@@ -213,7 +213,7 @@ class SmellsLikeJobSpiritPopup {
     }
   }
 
-  sendMessage() {
+  sendMessage(message) {
     return new Promise((resolve, reject) => {
       chrome.runtime.sendMessage(message, (response) => {
         if (chrome.runtime.lastError) {
@@ -227,5 +227,5 @@ class SmellsLikeJobSpiritPopup {
 }
 
 document.addEventListener("DOMContentLoaded", () => {
-  new CVAutofillPopup();
+  new SmellsLikeJobSpiritPopup();
 });
