@@ -1,4 +1,4 @@
-if (typeof browser !== "undefined" && !window.chrome) {
+if (typeof browser !== "undefined" && (!window.chrome || !window.chrome.runtime)) {
   window.chrome = browser;
 }
 
