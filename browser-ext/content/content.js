@@ -51,13 +51,20 @@ class AutofillContent {
                 sendResponse({ success: true  });
                 break;
             case 'performFill':
+            case 'performFill': {
+                const data = request.cvData ?? request.formData;
+                if (!data) {
+                    sendResponse({ success: false, message: 'No CV/form data provided' });
+                    break;
+                }
                 if (this.detectedForms.length > 0) {
-                    this.fillForm(this.detectedForms, request.cvData);
+                    this.detectedForms.forEach(f => this.fillFormFields(f.fields, data));
                     sendResponse({ success: true });
                 } else {
                     sendResponse({ success: false, message: 'No forms detected' });
                 }
                 break;
+            }
             default:
                 sendResponse({ success: false, message: 'Unknown action' });
         }
