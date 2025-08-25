@@ -259,33 +259,79 @@ class AutofillContent {
             'address': () => cvData?.contact_info?.address?.trim?.() || '',
             'city': () => cvData?.contact_info?.city?.trim?.() || '',
             'country': () => cvData?.contact_info?.country?.trim?.() || '',
+            'state': () =>
+                cvData?.contact_info?.state?.trim?.() ||
+                cvData?.contact_info?.region?.trim?.() || '',
+            'zip': () =>
+                (cvData?.contact_info?.postalCode ??
+                 cvData?.contact_info?.zip)?.toString?.() || '',
             'company': () => {
                 const experiences = cvData?.work_experience || [];
-                return Array.isArray(experiences) ? experiences[experiences.length - 1]?.company?.trim?.() || '' : '';
+                return Array.isArray(experiences)
+                    ? experiences[experiences.length - 1]?.company?.trim?.() || ''
+                    : '';
             },
             'position': () => {
                 const experiences = cvData?.work_experience || [];
-                return Array.isArray(experiences) ? experiences[experiences.length - 1]?.position?.trim?.() || '' : '';
+                return Array.isArray(experiences)
+                    ? experiences[experiences.length - 1]?.position?.trim?.() || ''
+                    : '';
             },
+            'website': () =>
+                cvData?.social_links?.website?.trim?.() ||
+                cvData?.personal_info?.website?.trim?.() || '',
             'education': () => {
                 const education = cvData?.education || [];
                 return Array.isArray(education)
-                    ? education.map(e => e?.institution?.trim?.()).filter(Boolean).join(', ')
+                    ? education
+                          .map(e => e?.institution?.trim?.())
+                          .filter(Boolean)
+                          .join(', ')
                     : '';
             },
             'linkedin': () => cvData?.social_links?.linkedin?.trim?.() || '',
             'github': () => cvData?.social_links?.github?.trim?.() || '',
+            'experience': () => {
+                const experiences = Array.isArray(cvData?.work_experience)
+                    ? cvData.work_experience
+                    : [];
+                return experiences
+                    .map(e => [e?.position, e?.company].filter(Boolean).join(' @ '))
+                    .filter(Boolean)
+                    .join('; ');
+            },
             'skills': () => {
                 const raw = cvData?.skills || [];
                 const allSkills = Array.isArray(raw)
                     ? raw.flatMap(s => (typeof s === 'string' ? s : s?.item)).filter(Boolean)
                     : [];
                 return allSkills.join(', ');
-            }
+            },
+            'cover_letter': () =>
+                cvData?.cover_letter?.trim?.() ||
+                cvData?.application?.coverLetter?.trim?.() || '',
+            'salary': () => {
+                const desired =
+                    cvData?.preferences?.desired_compensation ??
+                    cvData?.desired_compensation;
+                if (!desired) return '';
+                const amount = desired?.amount ?? desired?.min ?? desired?.max;
+                const currency = desired?.currency ?? 'USD';
+                return amount ? `${amount} ${currency}` : '';
+            },
+            'date': () => {
+                // Use ISO date, best chance to fit <input type="date">
+                try {
+                    return new Date().toISOString().slice(0, 10);
+                } catch {
+                    return '';
+                }
+            },
         };
 
         const mapper = mappings[classification];
         return mapper ? mapper() : '';
+    }
     }
 
     fillField(element, value) {
