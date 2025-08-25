@@ -219,8 +219,8 @@ class AutofillContent {
         }
 
         this.detectedForms.forEach(formData => {
-            this.autoFillForms(formData.fields, cvData);
-        })
+            this.fillFormFields(formData.fields, cvData);
+        });
 
         this.showNotification('Form filled successfully', 'success');
     }
