@@ -282,28 +282,33 @@ class AutofillContent {
     }
 
     fillField(element, value) {
-        switch (element.type) {
-            case 'email':
-            case 'text':
-            case 'tel':
-            case 'url':
-                element.value = value;
-                break;
-
-            case 'textarea':
-                element.value = value;
-                break;
-
-            case 'select-one':
-                const option = Array.from(element.options)
-                .find(opt =>
-                    opt.text.toLowerCase().includes(value.toLowerCase()) || opt.value.toLowerCase().includes(value.toLowerCase()));
-
-                if (option) {
-                    element.value = option.value;
+    fillField(element, value) {
+        const tag = element.tagName?.toLowerCase?.() || '';
+        if (tag === 'textarea') {
+            element.value = value;
+        } else {
+            switch (element.type) {
+                case 'email':
+                case 'text':
+                case 'tel':
+                case 'url':
+                case 'number':
+                case 'date':
+                    element.value = value;
+                    break;
+                case 'select-one': {
+                    const option = Array.from(element.options).find((opt) =>
+                        opt.text.toLowerCase().includes(value.toLowerCase()) ||
+                        opt.value.toLowerCase().includes(value.toLowerCase())
+                    );
+                    if (option) {
+                        element.value = option.value;
+                    }
+                    break;
                 }
-            break;
+            }
         }
+    }
             
         element.dispatchEvent(new Event('change',{ bubbles: true }));
         element.dispatchEvent(new Event('input', { bubbles: true }));
