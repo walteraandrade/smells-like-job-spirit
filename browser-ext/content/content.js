@@ -11,6 +11,13 @@ const FORM_SELECTOR = 'form';
 const FORM_CONTROLS_SELECTOR = 'input, textarea, select';
 
 class AutofillContent {
+    static COLORS = {
+    HIGHLIGHT_COLOR: '#667eea',
+    SUCCESS_BG: '#e8f5e8',
+    NOTIFICATION_SUCCESS: '#4caf50',
+    NOTIFICATION_INFO: '#2196f3'
+};
+
     constructor() {
         this.detectedForms = [];
         this.fieldMappings = this.initializeFieldMappings();
@@ -33,6 +40,10 @@ class AutofillContent {
 
 
     handleMessage(request, sender, sendResponse) {
+        sendErrorResponse = (message) => {
+            sendResponse({ success: false, message });
+        };
+
         switch (request.action) {
             case 'checkForForms': {
                 sendResponse({ formsFound: this.detectedForms.length > 0 });
@@ -51,14 +62,14 @@ class AutofillContent {
             case 'performFill': {
                 const data = request.cvData ?? request.formData;
                 if (!data) {
-                    sendResponse({ success: false, message: 'No CV/form data provided' });
+                    sendErrorResponse('No CV/form data provided')
                     break;
                 }
                 if (this.detectedForms.length > 0) {
                     this.detectedForms.forEach(f => this.fillFormFields(f.fields, data));
                     sendResponse({ success: true });
                 } else {
-                    sendResponse({ success: false, message: 'No forms detected' });
+                    sendErrorResponse('No forms detected');
                 }
                 break;
             }
@@ -185,7 +196,7 @@ class AutofillContent {
 
         this.detectedForms.forEach((formData, idx) => {
             formData.fields.forEach(field => {
-                field.element.style.outline = '2px solid #667eea'; /** TODO: create variables to better control the app style**/
+                field.element.style.outline = `2px solid ${COLORS.HIGHLIGHT_COLOR}`
                  field.element.style.outlineOffset = '2px';
                 field.element.setAttribute('data-cv-autofill', 'detected');
 
@@ -360,7 +371,7 @@ class AutofillContent {
             
         element.dispatchEvent(new Event('change',{ bubbles: true }));
         element.dispatchEvent(new Event('input', { bubbles: true }));
-        element.style.backgroundColor = "#e8f5e8"; /**TODO: fix colors **/
+        element.style.backgroundColor = `${COLORS.SUCCESS_BG}`
         setTimeout(() => {
             element.style.backgroundColor = '';
         }, 1000);
@@ -376,7 +387,7 @@ class AutofillContent {
             top: '20px',
             right: '20px',
             padding: '12px 16px',
-            backgroundColor: type === 'success' ? '#4caf50' : '#2196f3', /**TODO: fix colors **/
+            backgroundColor: type === 'success' ? `${COLORS.NOTIFICATION_SUCCESS}` : `${COLORS.NOTIFICATION_INFO}`, /**TODO: fix colors **/
             color: 'white',
             borderRadius: '6px',
             zIndex: '10000',
