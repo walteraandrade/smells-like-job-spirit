@@ -43,8 +43,9 @@ class SmellsLikeJobSpiritPopup {
 			e.preventDefault();
 			uploadArea.classList.remove("dragover");
 
-			if (e.target.files.lenght > 0) {
-				this.uploadCV(e.dataTransfer.files[0]);
+			const files = e.dataTransfer?.files
+			if (files && files.length > 0) {
+				this.uploadCV(files[0]);
 			}
 		});
 
@@ -68,7 +69,7 @@ class SmellsLikeJobSpiritPopup {
 			const response = await this.sendMessage({ action: "getCVData" });
 
 			if (response.success && response.data) {
-				this.cvData = data;
+				this.cvData = response.data;
 				this.showCVLoaded();
 			}
 		} catch (error) {
@@ -126,12 +127,12 @@ class SmellsLikeJobSpiritPopup {
 				currentWindow: true,
 			});
 
-			if (!tab.id) {
+			if (!tab?.id) {
 				this.showError("No active tab detected forms on");
 				return;
 			}
 
-			await chrome.sendTabMessage(tab.id, {
+			await this.sendTabMessage(tab.id, {
 				action: "detectForms",
 			});
 
@@ -153,12 +154,12 @@ class SmellsLikeJobSpiritPopup {
 				currentWindow: true,
 			});
 
-			if (!tab.id) {
-				this.showError("No active tab detected forms on");
+			if (!tab?.id) {
+				this.showError("No active tab to auto-fill on");
 				return;
 			}
 
-			await chrome.sendTabMessage(tab.id, {
+			await this.sendTabMessage(tab.id, {
 				action: "autoFill",
 				cvData: this.cvData,
 			});
@@ -207,17 +208,34 @@ class SmellsLikeJobSpiritPopup {
 		const previewElement = document.getElementById("cv-preview");
 		const personalInfo = this.cvData.personal_info;
 
-		previewElement.innerHTML = `
-            <h4>${personalInfo.full_name || "Name not found"}</h4>
-            <p>📧 ${personalInfo.email || "Email not found"}</p>
-            <p>📞 ${personalInfo.phone || "Phone not found"}</p>
-            <p>📍 ${personalInfo.city || "City not found"}, ${
-							personalInfo.country || "Country not found"
-						}</p>
-            <p>💼 ${this.cvData.experience?.length || 0} work experiences</p>
-            <p>🎓 ${this.cvData.education?.length || 0} education entries</p>
-            <p>🛠️ ${this.cvData.skills?.length || 0} skill categories</p>`;
-
+		previewElement.replaceChildren();
+        const h4 = document.createElement('h4');
+        h4.textContent = personalInfo.full_name || personalInfo.fullName || "Name not found";
+        previewElement.appendChild(h4);
+        const pEmail = document.createElement('p');
+        const lastEmail = this.cvData?.contact_info?.emails?.slice?.(-1)?.[0];
+        pEmail.textContent = `📧 ${personalInfo.email || (typeof lastEmail === 'string' ? lastEmail : lastEmail?.value) || "Email not found"}`;
+        previewElement.appendChild(pEmail);
+        const pPhone = document.createElement('p');
+        const lastPhone = this.cvData?.contact_info?.phones?.slice?.(-1)?.[0];
+        pPhone.textContent = `📞 ${personalInfo.phone || (typeof lastPhone === 'string' ? lastPhone : lastPhone?.value) || "Phone not found"}`;
+        previewElement.appendChild(pPhone);
+        const pLocation = document.createElement('p');
+        const city = personalInfo.city || this.cvData?.contact_info?.city;
+        const country = personalInfo.country || this.cvData?.contact_info?.country;
+        pLocation.textContent = `📍 ${city || "City not found"}, ${country || "Country not found"}`;
+        previewElement.appendChild(pLocation);
+        const pExp = document.createElement('p');
+        const expCount = this.cvData?.experience?.length ?? this.cvData?.work_experience?.length ?? 0;
+        pExp.textContent = `💼 ${expCount} work experiences`;
+        previewElement.appendChild(pExp);
+        const pEdu = document.createElement('p');
+        pEdu.textContent = `🎓 ${this.cvData?.education?.length || 0} education entries`;
+        previewElement.appendChild(pEdu);
+        const pSkills = document.createElement('p');
+        const skillsCount = Array.isArray(this.cvData?.skills) ? this.cvData.skills.length : 0;
+        pSkills.textContent = `🛠️ ${skillsCount} skill categories`;
+        previewElement.appendChild(pSkills);
 		previewElement.style.display = "block";
 	}
 
@@ -251,12 +269,12 @@ class SmellsLikeJobSpiritPopup {
 				currentWindow: true,
 			});
 
-			if (!tab.id) {
+			if (!tab?.id) {
 				this.showError("No active tab detected forms on");
 				return;
 			}
 
-			const response = await chrome.sendTabMessage(tab.id, {
+			const response = await this.sendTabMessage(tab.id, {
 				action: "checkForForms",
 			});
 

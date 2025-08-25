@@ -1,4 +1,9 @@
-const extensionAPI = typeof browser !== undefined ? browser : chrome;
+if (
+	typeof browser !== "undefined" &&
+	(!window.chrome || !window.chrome.runtime)
+) {
+	window.chrome = browser;
+}
 
 /** TODO: Test browser compatibility
 * Might need to use this function instead due to Chrome and Firefox Promise hanlding. One uses normal promises, the other callbacks.
@@ -23,14 +28,14 @@ class SmellsLikeJobSpiritBackground {
 	}
 
 	init() {
-		extensionAPI.runtime.onMessage.addListener(
+		chrome.runtime.onMessage.addListener(
 			(request, sender, sendResponse) => {
 				this.handleMessage(request, sender, sendResponse);
 				return true;
 			},
 		);
 
-		extensionAPI.runtime.onInstalled.addListener(() => {
+		chrome.runtime.onInstalled.addListener(() => {
 			console.log("Smells Like Job Spirit installed!");
 			this.initializeStorage();
 		});
@@ -93,7 +98,7 @@ class SmellsLikeJobSpiritBackground {
 			throw new Error(`API error: ${response.status}`);
 		}
 
-		const parsedData = response.json();
+		const parsedData = await response.json();
 
 		await this.saveCVData(parsedData);
 
@@ -102,7 +107,7 @@ class SmellsLikeJobSpiritBackground {
 
 	async getCVData() {
 		return new Promise((resolve) => {
-			extensionAPI.storage.local.get(["cvData"], (result) => {
+			chrome.storage.local.get(["cvData"], (result) => {
 				resolve(result.cvData || null);
 			});
 		});
@@ -110,21 +115,34 @@ class SmellsLikeJobSpiritBackground {
 
 	async saveCVData(data) {
 		return new Promise((resolve) => {
-			extensionAPI.storage.local.set({ cvData: data }, resolve);
+			chrome.storage.local.set({ cvData: data }, resolve);
 		});
 	}
 
 	async fillForm(tabId, formData) {
-		extensionAPI.tabs.sendMessage(tabId, {
-			action: "performFill",
-			formData: formData,
+		return new Promise((resolve, reject) => {
+			try {
+				chrome.tabs.sendMessage(
+					tabId,
+					{ action: "performFill", formData },
+					(response) => {
+						if (chrome.runtime.lastError) {
+							reject(new Error(chrome.runtime.lastError.message));
+							return;
+						}
+						resolve(response);
+					}
+				);
+			} catch (err) {
+				reject(err);
+			}
 		});
 	}
 
 	initializeStorage() {
-		extensionAPI.storage.local.get(["cvData"], (result) => {
+		chrome.storage.local.get(["cvData"], (result) => {
 			if (!result.cvData) {
-				extensionAPI.storage.local.set({
+				chrome.storage.local.set({
 					cvData: null,
 					settings: {
 						autoDetect: true,
