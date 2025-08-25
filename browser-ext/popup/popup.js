@@ -155,7 +155,7 @@ class SmellsLikeJobSpiritPopup {
 			});
 
 			if (!tab?.id) {
-				this.showError("No active tab to auto‑fill on");
+				this.showError("No active tab to auto-fill on");
 				return;
 			}
 
