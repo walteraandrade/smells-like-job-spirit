@@ -22,4 +22,4 @@ export const Patterns = {
             'date': /\b(?:date|dob|start(?:\s*date)?|end(?:\s*date)?|available\s*from)\b/
         };
 
-export default Patterns;
+Object.freeze(Patterns);

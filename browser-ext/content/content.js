@@ -40,7 +40,7 @@ class AutofillContent {
 
 
     handleMessage(request, sender, sendResponse) {
-        sendErrorResponse = (message) => {
+        const sendErrorResponse = (message) => {
             sendResponse({ success: false, message });
         };
 
@@ -93,7 +93,6 @@ class AutofillContent {
             }
         });
 
-        // Also catch standalone inputs outside forms
         this.detectedFormlessInputs();
 
         console.log(`Detected ${this.detectedForms.length} relevant forms`);
@@ -196,7 +195,7 @@ class AutofillContent {
 
         this.detectedForms.forEach((formData, idx) => {
             formData.fields.forEach(field => {
-                field.element.style.outline = `2px solid ${COLORS.HIGHLIGHT_COLOR}`
+                field.element.style.outline = `2px solid ${this.constructor.COLORS.HIGHLIGHT_COLOR}`
                  field.element.style.outlineOffset = '2px';
                 field.element.setAttribute('data-cv-autofill', 'detected');
 
@@ -371,7 +370,7 @@ class AutofillContent {
             
         element.dispatchEvent(new Event('change',{ bubbles: true }));
         element.dispatchEvent(new Event('input', { bubbles: true }));
-        element.style.backgroundColor = `${COLORS.SUCCESS_BG}`
+        element.style.backgroundColor = `${this.constructor.COLORS.SUCCESS_BG}`
         setTimeout(() => {
             element.style.backgroundColor = '';
         }, 1000);
@@ -387,7 +386,7 @@ class AutofillContent {
             top: '20px',
             right: '20px',
             padding: '12px 16px',
-            backgroundColor: type === 'success' ? `${COLORS.NOTIFICATION_SUCCESS}` : `${COLORS.NOTIFICATION_INFO}`, /**TODO: fix colors **/
+            backgroundColor: type === 'success' ? `${this.constructor.COLORS.NOTIFICATION_SUCCESS}` : `${this.constructor.COLORS.NOTIFICATION_INFO}`, /**TODO: fix colors **/
             color: 'white',
             borderRadius: '6px',
             zIndex: '10000',
