@@ -98,7 +98,7 @@ class SmellsLikeJobSpiritBackground {
 			throw new Error(`API error: ${response.status}`);
 		}
 
-		const parsedData = response.json();
+		const parsedData = await response.json();
 
 		await this.saveCVData(parsedData);
 
