@@ -48,11 +48,12 @@ class AutofillContent {
         };
 
         switch (request.action) {
-            case 'clearHighlights':
+            case 'clearHighlights': {
                 this.removeHighlights();
                 const result = this.autoFillForms(request.cvData);
                 sendResponse({ success: true, message: result.message, fieldsFilled: result.fieldsFilled });
                 break;
+            }
             case 'checkForForms': {
                 sendResponse({ formsFound: this.detectedForms.length > 0 });
                 break;
@@ -60,7 +61,14 @@ class AutofillContent {
             case 'detectForms': {
                 this.detectForms();
                 this.highlightForms(request.persistHighlights);
-                sendResponse({ success: true, forms: this.detectedForms });
+                const forms = this.detectedForms.map((f) => ({
+                    index: f.index,
+                    isFormless: !!f.isFormless,
+                    fields: f.fields.map(({ classification, name, id, placeholder, label, required, type }) => ({
+                        classification, name, id, placeholder, label, required, type
+                    })),
+                }));
+                sendResponse({ success: true, forms, formsCount: this.detectedForms.length });
                 break;
             }
             case 'autoFill':
@@ -279,21 +287,16 @@ class AutofillContent {
     }
 
     fillFormFields(fields, cvData) {
-        let filledCount = 0;
-
         fields.forEach(field => {
             const value = this.getValueForField(field.classification, cvData);
 
-            if (value) {
-                this.fillField(field.element, value);
-                filledCount++;
+            if (value !== undefined && value !== null) {
+                this.fillField(field.element, String(value));
             }
         });
-
-        return filledCount;
     }
 
-    getValueForField(classification, cvData) {
+    getValueForField(classification, cvData, fieldInfo = {}) {
         const mappings = {
             'first_name': () => {
                 const fullName = cvData?.personal_info?.fullName?.trim?.() || '';
@@ -377,12 +380,20 @@ class AutofillContent {
                 const currency = desired?.currency ?? 'USD';
                 return amount ? `${amount} ${currency}` : '';
             },
-            /**  Use current date in ISO format for <input type="date"> compatibility
-+           TODO: Consider detecting expected date format from field attributes **/
             'date': () => {
+                const labelText = `${fieldInfo.label || ''} ${fieldInfo.name || ''}`.toLowerCase();
+                if (labelText.includes('dob') || labelText.includes('birth')) {
+                    return cvData?.personal_info?.dob || '';
+                } else if (labelText.includes('start')) {
+                    return cvData?.work_experience?.[0]?.start_date || '';
+                } else if (labelText.includes('end')) {
+                    return cvData?.work_experience?.[0]?.end_date || '';
+                } else if (labelText.includes('available')) {
+                    return cvData?.availability?.from || '';
+                }
+                // Default to today's date for generic date fields
                 try {
-                    const now = new Date();
-                    return now.toISOString().slice(0, 10);
+                    return new Date().toISOString().slice(0, 10);
                 } catch {
                     return '';
                 }
@@ -407,6 +418,17 @@ class AutofillContent {
                 case 'date':
                     element.value = value;
                     break;
+                case 'checkbox': {
+                    element.checked = Boolean(value) && value !== 'false' && value !== '0';
+                    break;
+                }
+                case 'radio': {
+                    const name = element.name ?? '';
+                    const group = document.querySelectorAll(`input[type="radio"][name="${CSS.escape(name)}"]`);
+                    const target = Array.from(group).find(r => r.value?.toLowerCase?.() === String(value).toLowerCase());
+                    if (target) target.checked = true;
+                    break;
+                }
                 case 'select-one': {
                     const option = Array.from(element.options).find((opt) =>
                         opt.text.toLowerCase().includes(value.toLowerCase()) ||

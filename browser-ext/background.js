@@ -120,9 +120,22 @@ class SmellsLikeJobSpiritBackground {
 	}
 
 	async fillForm(tabId, formData) {
-		chrome.tabs.sendMessage(tabId, {
-			action: "performFill",
-			formData: formData,
+		return new Promise((resolve, reject) => {
+			try {
+				chrome.tabs.sendMessage(
+					tabId,
+					{ action: "performFill", formData },
+					(response) => {
+						if (chrome.runtime.lastError) {
+							reject(new Error(chrome.runtime.lastError.message));
+							return;
+						}
+						resolve(response);
+					}
+				);
+			} catch (err) {
+				reject(err);
+			}
 		});
 	}
 
