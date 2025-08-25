@@ -20,7 +20,6 @@ class AutofillContent {
     init() {
         chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
             this.handleMessage(request, sender, sendResponse);
-            // Synchronous behavior: sendResponse is called immediately within handleMessage
         });
 
         if (document.readyState === 'loading') {
@@ -36,8 +35,7 @@ class AutofillContent {
     handleMessage(request, sender, sendResponse) {
         switch (request.action) {
             case 'checkForForms': {
-                const formsFound = this.detectedForms;
-                sendResponse({ formsFound: formsFound.length > 0 });
+                sendResponse({ formsFound: this.detectedForms > 0 });
                 break;
             }
             case 'detectForms': {
@@ -332,9 +330,7 @@ class AutofillContent {
         const mapper = mappings[classification];
         return mapper ? mapper() : '';
     }
-    }
 
-    fillField(element, value) {
     fillField(element, value) {
         const tag = element.tagName?.toLowerCase?.() || '';
         if (tag === 'textarea') {
@@ -361,7 +357,6 @@ class AutofillContent {
                 }
             }
         }
-    }
             
         element.dispatchEvent(new Event('change',{ bubbles: true }));
         element.dispatchEvent(new Event('input', { bubbles: true }));
@@ -417,3 +412,5 @@ class AutofillContent {
         return mappings;
     }
 }
+
+new AutofillContent();
