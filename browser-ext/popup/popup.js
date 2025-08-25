@@ -131,7 +131,7 @@ class SmellsLikeJobSpiritPopup {
 				return;
 			}
 
-			await chrome.sendTabMessage(tab.id, {
+			await this.sendTabMessage(tab.id, {
 				action: "detectForms",
 			});
 
@@ -158,7 +158,7 @@ class SmellsLikeJobSpiritPopup {
 				return;
 			}
 
-			await chrome.sendTabMessage(tab.id, {
+			await this.sendTabMessage(tab.id, {
 				action: "autoFill",
 				cvData: this.cvData,
 			});
@@ -256,7 +256,7 @@ class SmellsLikeJobSpiritPopup {
 				return;
 			}
 
-			const response = await chrome.sendTabMessage(tab.id, {
+			const response = await this.sendTabMessage(tab.id, {
 				action: "checkForForms",
 			});
 

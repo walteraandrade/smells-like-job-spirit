@@ -35,7 +35,7 @@ class AutofillContent {
     handleMessage(request, sender, sendResponse) {
         switch (request.action) {
             case 'checkForForms': {
-                sendResponse({ formsFound: this.detectedForms > 0 });
+                sendResponse({ formsFound: this.detectedForms.length > 0 });
                 break;
             }
             case 'detectForms': {
@@ -48,7 +48,6 @@ class AutofillContent {
                 this.autoFillForms(request.cvData);
                 sendResponse({ success: true  });
                 break;
-            case 'performFill':
             case 'performFill': {
                 const data = request.cvData ?? request.formData;
                 if (!data) {
@@ -157,8 +156,9 @@ class AutofillContent {
     }
 
     detectedFormlessInputs() {
-        const formlessInputs = document.querySelectorAll(`${FORM_CONTROLS_SELECTOR}:not(${FORM_SELECTOR} ${FORM_CONTROLS_SELECTOR})`);
 
+        const allControls = document.querySelectorAll(FORM_CONTROLS_SELECTOR);
+        const formlessInputs = Array.from(allControls).filter(el => !el.closest(FORM_SELECTOR));
         if (formlessInputs.length > 0) {
             const fields = [];
 
@@ -390,7 +390,7 @@ class AutofillContent {
         setTimeout(() => {
             notification.remove();
         }, 3000);
-    };
+    }
 
     initializeFieldMappings() {
         const mappings = {
