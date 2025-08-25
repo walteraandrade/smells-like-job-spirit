@@ -27,17 +27,20 @@ class AutofillContent {
     init() {
         chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
             this.handleMessage(request, sender, sendResponse);
+
+            return true;
         });
 
         if (document.readyState === 'loading') {
             document.addEventListener('DOMContentLoaded', () => {
                 this.detectForms();
+                this.observeFormMutations();
             });
         } else {
             this.detectForms();
+            this.observeFormMutations();
         }
     }
-
 
     handleMessage(request, sender, sendResponse) {
         const sendErrorResponse = (message) => {
@@ -45,19 +48,23 @@ class AutofillContent {
         };
 
         switch (request.action) {
+            case 'clearHighlights':
+                this.removeHighlights();
+                sendResponse({ success: true });
+                break;
             case 'checkForForms': {
                 sendResponse({ formsFound: this.detectedForms.length > 0 });
                 break;
             }
             case 'detectForms': {
                 this.detectForms();
-                this.highlightForms();
+                this.highlightForms(request.persistHighlights);
                 sendResponse({ success: true, forms: this.detectedForms });
                 break;
             }
             case 'autoFill':
                 this.autoFillForms(request.cvData);
-                sendResponse({ success: true  });
+                sendResponse({ success: true });
                 break;
             case 'performFill': {
                 const data = request.cvData ?? request.formData;
@@ -100,7 +107,22 @@ class AutofillContent {
     }
 
     analyzeFormFields(element) {
-        if (element.type === 'hidden' || element.disabled || element.readOnly || element.type === 'submit' || element.type === 'button') return null
+        const isHidden = element.offsetParent === null || getComputedStyle(element).visibility === 'hidden';
+        const isContentEditable = element.isContentEditable;
+        const isAriaReadonly = element.getAttribute('aria-readonly') === 'true';
+
+        if (
+            element.type === 'hidden' ||
+            element.disabled ||
+            element.readOnly ||
+            isAriaReadonly ||
+            isHidden ||
+            isContentEditable ||
+            element.type === 'submit' ||
+            element.type === 'button'
+        ) {
+            return null;
+        }
 
         const fieldInfo = {
             element,
@@ -111,7 +133,7 @@ class AutofillContent {
             label: this.findFieldLabel(element),
             className: element.className || '',
             required: element.required || false
-        }
+        };
 
         fieldInfo.classification = this.classifyField(fieldInfo);
 
@@ -155,14 +177,23 @@ class AutofillContent {
     }
 
     classifyField(fieldInfo) {
-        const text = `{${fieldInfo.name} ${fieldInfo.id} ${fieldInfo.placeholder} ${fieldInfo.label} ${fieldInfo.className} }`.toLowerCase();
+        let text = `{${fieldInfo.name} ${fieldInfo.id} ${fieldInfo.placeholder} ${fieldInfo.label} ${fieldInfo.className} }`.toLowerCase();
+
+        const ariaLabel = fieldInfo.element.getAttribute('aria-label')?.trim()?.toLowerCase();
+        const ariaLabelledById = fieldInfo.element.getAttribute('aria-labelledby');
+        const ariaLabelledBy = ariaLabelledById
+            ? document.getElementById(ariaLabelledById)?.textContent?.trim()?.toLowerCase()
+            : '';
+
+        if (ariaLabel) text += ` ${ariaLabel}`;
+        if (ariaLabelledBy) text += ` ${ariaLabelledBy}`;
 
         for (const [classification, pattern] of Object.entries(Patterns)) {
             if (pattern.test(text)) {
                 return classification;
             }
         }
-        return null
+        return null;
     }
 
     detectedFormlessInputs() {
@@ -190,23 +221,26 @@ class AutofillContent {
         }
     }
 
-    highlightForms() {
+    highlightForms(persist = false) {
         this.removeHighlights();
 
         this.detectedForms.forEach((formData, idx) => {
             formData.fields.forEach(field => {
-                field.element.style.outline = `2px solid ${this.constructor.COLORS.HIGHLIGHT_COLOR}`
-                 field.element.style.outlineOffset = '2px';
+                field.element.style.outline = `2px solid ${this.constructor.COLORS.HIGHLIGHT_COLOR}`;
+                field.element.style.outlineOffset = '2px';
                 field.element.setAttribute('data-cv-autofill', 'detected');
 
                 if (field.classification) {
-                    field.element.title = `Smells Like Job Spirit: ${field.classification}`
+                    field.element.title = `Smells Like Job Spirit: ${field.classification}`;
                 }
             });
         });
-        setTimeout(() => {
-            this.removeHighlights();
-        }, 5000)
+
+        if (!persist) {
+            setTimeout(() => {
+                this.removeHighlights();
+            }, 5000);
+        }
     }
 
     removeHighlights() {
@@ -226,21 +260,32 @@ class AutofillContent {
             return;
         }
 
+        let fieldsFilled = 0;
+
         this.detectedForms.forEach(formData => {
-            this.fillFormFields(formData.fields, cvData);
+            fieldsFilled += this.fillFormFields(formData.fields, cvData);
         });
 
-        this.showNotification('Form filled successfully', 'success');
+        if (fieldsFilled > 0) {
+            this.showNotification(`Form filled successfully. ${fieldsFilled} field(s) updated.`, 'success');
+        } else {
+            this.showNotification('No fields were updated.', 'info');
+        }
     }
 
     fillFormFields(fields, cvData) {
+        let filledCount = 0;
+
         fields.forEach(field => {
             const value = this.getValueForField(field.classification, cvData);
 
             if (value) {
-                this.fillField(field.element, value)
+                this.fillField(field.element, value);
+                filledCount++;
             }
         });
+
+        return filledCount;
     }
 
     getValueForField(classification, cvData) {
@@ -410,16 +455,35 @@ class AutofillContent {
             'phone': 'Phone Number',
             'address': 'Address',
             'city': 'City',
+            'state': 'State/Province',
+            'zip': 'ZIP/Postal Code',
             'country': 'Country',
             'company': 'Company',
             'position': 'Position',
             'education': 'Education',
             'linkedin': 'LinkedIn Profile',
             'github': 'GitHub Profile',
+            'experience': 'Experience',
+            'cover_letter': 'Cover Letter',
+            'salary': 'Desired Salary',
+            'date': 'Date',
+            'full_name': 'Full Name',
             'skills': 'Skills'
         };
         console.log('Field mappings initialized');
         return mappings;
+    }
+
+    observeFormMutations() {
+        const observer = new MutationObserver((mutationsList) => {
+            for (const mutation of mutationsList) {
+                if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
+                    this.detectForms();
+                }
+            }
+        });
+
+        observer.observe(document.body, { childList: true, subtree: true });
     }
 }
 
