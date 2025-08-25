@@ -50,7 +50,8 @@ class AutofillContent {
         switch (request.action) {
             case 'clearHighlights':
                 this.removeHighlights();
-                sendResponse({ success: true });
+                const result = this.autoFillForms(request.cvData);
+                sendResponse({ success: true, message: result.message, fieldsFilled: result.fieldsFilled });
                 break;
             case 'checkForForms': {
                 sendResponse({ formsFound: this.detectedForms.length > 0 });
@@ -257,7 +258,7 @@ class AutofillContent {
     autoFillForms(cvData) {
         if (!cvData || this.detectedForms.length === 0) {
             console.log('No CV data or forms detected');
-            return;
+            return { fieldsFilled: 0, message: 'No CV data or forms detected' };
         }
 
         let fieldsFilled = 0;
@@ -266,11 +267,15 @@ class AutofillContent {
             fieldsFilled += this.fillFormFields(formData.fields, cvData);
         });
 
+        const message = fieldsFilled > 0 ? `Form filled successfully. ${fieldsFilled} field(s) updated.`: 'No fields were updated.';
+
         if (fieldsFilled > 0) {
-            this.showNotification(`Form filled successfully. ${fieldsFilled} field(s) updated.`, 'success');
+            this.showNotification(message, 'success');
         } else {
-            this.showNotification('No fields were updated.', 'info');
+            this.showNotification(message, 'info');
         }
+
+        return { fieldsFilled, message };
     }
 
     fillFormFields(fields, cvData) {
@@ -372,10 +377,12 @@ class AutofillContent {
                 const currency = desired?.currency ?? 'USD';
                 return amount ? `${amount} ${currency}` : '';
             },
+            /**  Use current date in ISO format for <input type="date"> compatibility
++           TODO: Consider detecting expected date format from field attributes **/
             'date': () => {
-                // Use ISO date, best chance to fit <input type="date">
                 try {
-                    return new Date().toISOString().slice(0, 10);
+                    const now = new Date();
+                    return now.toISOString().slice(0, 10);
                 } catch {
                     return '';
                 }
