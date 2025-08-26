@@ -7,7 +7,7 @@
 	"permissions": ["activeTab", "storage", "tabs"],
 	"host_permissions": ["http://localhost:8000/*", "https://*/*"],
 	"background": {
-		"service_worker": "background.js"
+		"service_worker": "./background/background.js"
 	},
 	"content_scripts": [
 		{
@@ -24,9 +24,7 @@
 	},
 
 	"icons": {
-		"16": "assets/icon16.png",
-		"48": "assets/icon48.png",
-		"128": "assets/icon128.png"
+		"16": "assets/icon.png"
 	},
 
 	"web_accessible_resources": [
