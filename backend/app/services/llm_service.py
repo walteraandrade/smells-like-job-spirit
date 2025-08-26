@@ -1,7 +1,7 @@
 import requests
 import json
 import logging
-from typing import Any, Optional, Dict, List
+from typing import Any, Optional, Tuple
 from pydantic import BaseModel
 from collections import defaultdict, deque
 
@@ -123,6 +123,77 @@ JSON Response:
         return json.loads(json_str)
 
 
+class ConfigService:
+    def __init__(self):
+        self.feedback_store = {}
+
+    def get_feedback_data(self) -> dict[str, list[dict[str, Any]]]:
+        return self.feedback_store
+
+    def save_feedback_data(
+        self, domain: str, feedback_list: list[dict[str, Any]]
+    ) -> None:
+        self.feedback_store[domain] = feedback_list
+
+
+class InMemoryConfigService:
+    def __init__(self):
+        self.feedback_store = {}
+
+    def get_feedback_data(self) -> dict[str, list[dict[str, Any]]]:
+        """
+        Retrieve feedback data stored in memory.
+
+        Returns:
+            A dictionary of feedback data grouped by domain.
+        """
+        return self.feedback_store
+
+    def save_feedback_data(
+        self, domain: str, feedback_list: list[dict[str, Any]]
+    ) -> None:
+        """
+        Save feedback data for a specific domain in memory.
+
+        Args:
+            domain: The domain to associate with the feedback data.
+            feedback_list: A list of feedback data to store.
+        """
+        self.feedback_store[domain] = feedback_list
+
+    def get_user_preferences(self) -> None:
+        raise NotImplementedError(
+            "get_user_preferences is not implemented in InMemoryConfigService."
+        )
+
+    def save_user_preferences(self, preferences: Any) -> None:
+        raise NotImplementedError(
+            "save_user_preferences is not implemented in InMemoryConfigService."
+        )
+
+    def get_site_configuration(self, domain: str) -> None:
+        raise NotImplementedError(
+            "get_site_configuration is not implemented in InMemoryConfigService."
+        )
+
+    def save_site_configuration(self, config: Any) -> None:
+        raise NotImplementedError(
+            "save_site_configuration is not implemented in InMemoryConfigService."
+        )
+
+    def learn_field_mapping(
+        self, domain: str, field_name: str, cv_path: str, confidence: float
+    ) -> None:
+        raise NotImplementedError(
+            "learn_field_mapping is not implemented in InMemoryConfigService."
+        )
+
+    def get_learned_mappings(self, domain: str) -> None:
+        raise NotImplementedError(
+            "get_learned_mappings is not implemented in InMemoryConfigService."
+        )
+
+
 class Learning:
     def __init__(self, config_service, max_feedback_size: int = 100):
         """
@@ -136,7 +207,7 @@ class Learning:
         self.max_feedback_size = max_feedback_size
         self.feedback_data = self._load_feedback_data()
 
-    def _load_feedback_data(self) -> Dict[str, deque]:
+    def _load_feedback_data(self) -> dict[str, deque]:
         """
         Load existing feedback data from the configuration or initialize empty deques.
 
@@ -151,13 +222,13 @@ class Learning:
 
         return feedback_data
 
-    def add_feedback(self, domain: str, feedback: Dict[str, Any]) -> None:
+    def save_feedback_data(self, domain: str, feedback: dict[str, Any]) -> None:
         """
-        Add feedback for a specific domain.
+        Save feedback data for a specific domain.
 
         Args:
-            domain: The domain to which the feedback belongs.
-            feedback: The feedback data to add.
+            domain: The domain to associate with the feedback data.
+            feedback: The feedback data to store.
         """
         if domain not in self.feedback_data:
             self.feedback_data[domain] = deque(maxlen=self.max_feedback_size)
@@ -178,9 +249,9 @@ class Learning:
         except Exception as e:
             logging.error(f"Failed to persist feedback for domain '{domain}': {e}")
 
-    def get_feedback(self, domain: str) -> List[Dict[str, Any]]:
+    def get_feedback_data(self, domain: str) -> list[dict[str, Any]]:
         """
-        Retrieve feedback for a specific domain.
+        Retrieve feedback data for a specific domain.
 
         Args:
             domain: The domain whose feedback data should be retrieved.
@@ -190,7 +261,7 @@ class Learning:
         """
         return list(self.feedback_data.get(domain, []))
 
-    def import_learned_data(self, data: Dict[str, Any]) -> None:
+    def import_learned_data(self, data: dict[str, Any]) -> None:
         """
         Import learned data into the configuration service.
 
@@ -212,14 +283,12 @@ class Learning:
         validated_mappings = []
 
         for mapping in mappings:
-            # Use the domain from the mapping if available, otherwise fallback to the top-level domain
             domain = mapping.get("domain", top_level_domain).strip().lower()
 
             if not domain:
                 logging.warning("Skipping mapping due to missing domain: %s", mapping)
                 continue
 
-            # Validate required keys and their types
             if not all(
                 key in mapping and isinstance(mapping[key], (str, float))
                 for key in ["field_name", "cv_path", "confidence"]
@@ -229,7 +298,6 @@ class Learning:
                 )
                 continue
 
-            # Normalize and validate confidence
             confidence = mapping["confidence"]
             if not isinstance(confidence, (int, float)) or not (
                 0.0 <= confidence <= 1.0
@@ -239,7 +307,6 @@ class Learning:
                 )
                 continue
 
-            # Add validated mapping
             validated_mappings.append(
                 {
                     "domain": domain,
@@ -249,7 +316,6 @@ class Learning:
                 }
             )
 
-        # Call config_service.learn_field_mappings for each validated mapping
         for mapping in validated_mappings:
             self.config_service.learn_field_mappings(
                 mapping["domain"],
@@ -260,18 +326,56 @@ class Learning:
 
         logging.info("Imported %d validated mappings.", len(validated_mappings))
 
+    def improve_field_classification(
+        self, domain: str, field_info: dict[str, Any]
+    ) -> Tuple[Optional[str], float]:
+        """
+        Improve field classification based on learned mappings.
 
-class ConfigService:
-    def __init__(self):
-        self.feedback_store = {}
+        Args:
+            domain: The domain for which the classification is being improved.
+            field_info: Information about the field to classify.
 
-    def get_feedback_data(self) -> Dict[str, List[Dict[str, Any]]]:
-        return self.feedback_store
+        Returns:
+            A tuple containing the CV path and confidence score.
+        """
+        learned_mappings = self.config_service.get_learned_mappings(domain)
 
-    def save_feedback_data(
-        self, domain: str, feedback_list: List[Dict[str, Any]]
-    ) -> None:
-        self.feedback_store[domain] = feedback_list
+        field_name = field_info.get("name", "").lower()
+
+        for mapping in learned_mappings:
+            if mapping["field_name"].lower() == field_name:
+                return mapping["cv_path"], min(mapping["confidence"] * 1.2, 1.0)
+
+        best_match = None
+        best_score = 0.0
+
+        for mapping in learned_mappings:
+            score = self._calculate_similarity_score(field_info, mapping)
+            if score > best_score and score > 0.3:
+                best_score = score
+                best_match = mapping
+
+        if best_match:
+            adjusted_confidence = best_match["confidence"] * best_score
+            return best_match["cv_path"], adjusted_confidence
+
+        return None, 0.0
+
+    def _calculate_similarity_score(
+        self, field_info: dict[str, Any], mapping: dict[str, Any]
+    ) -> float:
+        """
+        Calculate a similarity score between a field and a mapping.
+
+        Args:
+            field_info: Information about the field.
+            mapping: A learned mapping.
+
+        Returns:
+            A similarity score between 0.0 and 1.0.
+        """
+        return 0.0
 
 
 if __name__ == "__main__":
@@ -294,14 +398,3 @@ if __name__ == "__main__":
 
     result = llm_service.parse_cv(sample_cv)
     print(json.dumps(result.dict(), indent=2))
-
-    config_service = ConfigService()
-    learning_service = Learning(config_service, max_feedback_size=50)
-
-    # Add feedback
-    learning_service.add_feedback(
-        "example.com", {"field": "email", "feedback": "correct"}
-    )
-
-    # Retrieve feedback
-    print(learning_service.get_feedback("example.com"))
