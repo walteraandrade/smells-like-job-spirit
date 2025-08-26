@@ -79,16 +79,16 @@ async def parse_cv(file: UploadFile = File(...)):
             
 
 @app.post("/api/generate-mappings")
-async def generate_from_mappings(request: FormMappingRequest):
+async def generate_mappings(request: FormMappingRequest):
     """Generate mappings between CV data and form fields"""
     try:
-        form_fields_dict = [fild.dict() for fild in request.form_fields]
-        mappings = form_detector.generate_mappings(request.cv_data, form_fields_dict)
+        form_fields_dict = [field.dict() for field in request.form_fields]
+        mappings = form_detector.generate_field_mapping(request.cv_data, form_fields_dict)
         
         return {
             "success": True,
             "mappings": mappings["mappings"],
-            "unmatched_fields": mappings["unmatched_fields"],
+           "unmapped_fields": mappings["unmapped_fields"],
             "confidence_scores": mappings["confidence_scores"],
             "total_fields": len(request.form_fields),
             "mapped_fields": len(mappings["mappings"]),

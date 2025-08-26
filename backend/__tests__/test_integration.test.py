@@ -47,7 +47,7 @@ class TestIntegration:
             with open(temp_path, 'rb') as f:
                 response = await client.post("/api/parse-cv", files={"file": ("test_cv.txt", f, "text/plain")})
 
-            assert response.status == 200
+            assert response.status_code == 200
             cv_data = response.json()
 
             assert "personal_info" in cv_data
@@ -63,7 +63,7 @@ class TestIntegration:
                         "placeholder": "",
                         "id": "name",
                         "className": "",
-                        "requred": True
+                        "required": True
                         },
                     {
                         "name": "email",
@@ -94,5 +94,5 @@ class TestIntegration:
             Path(temp_path).unlink(missing_ok=True)
 
 
-    if __name__ == "__main__":
-        pytest.main([__file__, "v"])
+if __name__ == "__main__":
+    pytest.main([__file__, "-v"])

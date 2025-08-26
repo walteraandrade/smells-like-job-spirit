@@ -35,7 +35,7 @@ class FormDetector:
     def _initialize_patterns(self) -> Dict[str, List[re.Pattern]]:
         return {
                 'personal_info.full_name': [
-                    re.compile(r'full?.name|name(?!.*email)) (?!*.user.I)', re.I),
+                    re.compile(r'full?.name|name(?!.*email)(?!.*user)', re.I),
                     re.compile(r'^name$', re.I),
                     re.compile(r'applicant.?name', re.I)
                     ],
@@ -52,12 +52,12 @@ class FormDetector:
                     re.compile(r'^email$', re.I)
                     ],
                 'personal_info.phone': [
-                    re.compile(r'phone|cel|tel|moile|cell|contact', re.I),
+                    re.compile(r'phone|cel|tel|mobile|cell|contact', re.I),
                     re.compile(r'phone.?number', re.I)
                     ],
                 'personal_info.address': [
                     re.compile(r'address|addr(?!ess)', re.I),
-                    re.copile(r'street|location', re.I)
+                    re.compile(r'street|location', re.I)
                     ],
                 'personal_info.country': [
                     re.compile(r'country|nation', re.I),
@@ -75,7 +75,7 @@ class FormDetector:
                     re.compile(r'school|university|college|institution', re.I),
                     re.compile(r'education.*institution', re.I)
                     ],
-                'education[r0].degree': [
+                'education[0].degree': [
                     re.compile(r'^degree$', re.I)
                     ],
                 'skills_text': [
@@ -117,33 +117,31 @@ class FormDetector:
                         confidence=confidence
                         )
                 mappings.append(mapping)
-        return mapping
+        return mappings
 
     
     def _classify_single_field(self, field: FormField) -> tuple[Optional[str], float]:
-    
         text_attributes = [
             field.name,
             field.attributes.get('id', ''),
             field.attributes.get('placeholder', ''),
             field.attributes.get('label', ''),
-            field.attributes.get('className', '') # TODO: isn't className a React pro
+            field.attributes.get('className', ''),  # React prop
+            field.attributes.get('class', '')  # HTML attribute
         ]
-    
 
         combined_text = ' '.join(filter(None, text_attributes))
 
         best_classification = None
         best_confidence = 0
-    
+
         for classification, patterns in self.classification_patterns.items():
-    
             confidence = self._calculate_pattern_confidence(combined_text, patterns)
             if confidence > best_confidence:
                 best_confidence = confidence
                 best_classification = classification
 
-                return best_classification, best_confidence
+        return best_classification, best_confidence
 
     def _calculate_pattern_confidence(self, text: str, patterns: List[re.Pattern]) -> float:
         if not text:
@@ -160,7 +158,7 @@ class FormDetector:
                 elif re.search(r'\b' + re.escape(match.group(0)) + r'\b', text, re.I):
                     confidence = 0.9
 
-            max_confidence = max(max_confidence, confidence)
+                max_confidence = max(max_confidence, confidence)
 
         return max_confidence
 
@@ -216,9 +214,7 @@ class FormDetector:
                 if part.isdigit():
                     current_data = current_data[int(part)]
                 else:
-                    current_data = current_data.get(part, {})
-
-
+                    current_data = current_data.get(part)
                 if current_data is None:
                     return None
 
@@ -306,7 +302,7 @@ if __name__ == "__main__":
         ]
     }
     
-    mappings = detector.generate_field_mappings(sample_cv_data, sample_fields)
+    mappings = detector.generate_field_mapping(sample_cv_data, sample_fields)
     
     print("Generated mappings:")
     for mapping in mappings['mappings']:
