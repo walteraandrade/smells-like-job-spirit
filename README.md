@@ -179,8 +179,8 @@ python -m http.server 8080
 - [x] Form detection and autofill
 
 ### Phase 2: Enhanced Features (In Progress)
-- [ ] Advanced form field classification
-- [ ] Custom field mapping editor
+- [x] Advanced form field classification
+- [x] Custom field mapping editor
 - [ ] Support for more CV formats
 - [ ] Batch processing multiple applications
 
