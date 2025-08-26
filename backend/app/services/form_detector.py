@@ -31,62 +31,32 @@ class FormDetector:
             'format_experience': self._format_experience,
             'format_education': self._format_education
         }
+        # Map classification labels to actual CV paths
+        # Could simply change labels, but this allows more flexibility
+        self.classification_to_cv_path = {
+            'skills_text': 'skills',
+            'experience_summary': 'experience[0]',
+            'education_summary': 'education[0]',
+        }
 
     def _initialize_patterns(self) -> Dict[str, List[re.Pattern]]:
         return {
-                'personal_info.full_name': [
-                    re.compile(r'full?.name|name(?!.*email)(?!.*user)', re.I),
-                    re.compile(r'^name$', re.I),
-                    re.compile(r'applicant.?name', re.I)
-                    ],
-                'personal_info.first_name': [
-                    re.compile(r'first.?name|fname|given.?name', re.I),
-                    re.compile(r'^firstname$', re.I),
-                    ],
-                'personal_info.last_name': [
-                    re.compile(r'last.?name|lname|surname|family.?name', re.I),
-                    re.compile(r'^lastname$', re.I)
-                    ],
-                'personal_info.email': [
-                    re.compile(r'email|e.?mail', re.I),
-                    re.compile(r'^email$', re.I)
-                    ],
-                'personal_info.phone': [
-                    re.compile(r'phone|cel|tel|mobile|cell|contact', re.I),
-                    re.compile(r'phone.?number', re.I)
-                    ],
-                'personal_info.address': [
-                    re.compile(r'address|addr(?!ess)', re.I),
-                    re.compile(r'street|location', re.I)
-                    ],
-                'personal_info.country': [
-                    re.compile(r'country|nation', re.I),
-                    re.compile(r'^country$', re.I)
-                    ],
-                'experience[0].company': [
-                    re.compile(r'current.?company', re.I),
-                    re.compile(r'company|organization|employer|workplace', re.I)
-                    ],
-                'experience[0].job_title': [
-                    re.compile(r'position|title|job.?title|role|current.?role', re.I),
-                    re.compile(r'^title$', re.I)
-                    ],
-                'education[0].institution': [
-                    re.compile(r'school|university|college|institution', re.I),
-                    re.compile(r'education.*institution', re.I)
-                    ],
-                'education[0].degree': [
-                    re.compile(r'^degree$', re.I)
-                    ],
-                'skills_text': [
-                    re.compile(r'skills|skill|competenc|abilities', re.I),
-                    re.compile(r'technical.?skills', re.I)
-                    ],
-                'cover_letter': [
-                    re.compile(r'cover.?letter|motivation|why.*interested', re.I),
-                    re.compile(r'message|additional.*info', re.I)
-                    ]
-                }
+            'skills_text': [
+                re.compile(r'skills|skill|competenc|abilities', re.I),
+                re.compile(r'technical.?skills', re.I)
+            ],
+            'experience_summary': [
+                re.compile(r'(current|latest).*(role|job|position|experience)', re.I),
+                re.compile(r'(most\s*recent).*(experience|employment)', re.I),
+            ],
+            'education_summary': [
+                re.compile(r'(highest|latest).*(degree|education|qualification)', re.I),
+            ],
+            'cover_letter': [
+                re.compile(r'cover.?letter|motivation|why.*interested', re.I),
+                re.compile(r'message|additional.*info', re.I)
+            ]
+        }
 
 
     def _initialize_transforms(self) -> Dict[str, str]:
@@ -98,24 +68,24 @@ class FormDetector:
 
     def classify_fields(self, field_data: List[Dict[str, Any]]) -> List[FormMapping]:
         mappings = []
-        
+
         for field in field_data:
             field_obj = FormField(
-                    name=field.get('name', ''),
-                    field_type=field.get('type', 'text'),
-                    classification=None,
-                    confidence=0.0,
-                    attributes=field
+                name=field.get('name', ''),
+                field_type=field.get('type', 'text'),
+                classification=None,
+                confidence=0.0,
+                attributes=field
             )
-                
+
             classification, confidence = self._classify_single_field(field_obj)
             if classification and confidence > 0.5:
                 mapping = FormMapping(
-                        field_name=field_obj.name,
-                        cv_path=classification,
-                        transform_function=self.common_transforms.get(classification),
-                        confidence=confidence
-                        )
+                    field_name=field_obj.name,
+                    cv_path=self.classification_to_cv_path.get(classification, classification),
+                    transform_function=self.common_transforms.get(classification),
+                    confidence=confidence
+                )
                 mappings.append(mapping)
         return mappings
 
@@ -221,11 +191,10 @@ class FormDetector:
             if transform_function and isinstance(current_data, (list, dict)):
                 return self._apply_transform(current_data, transform_function, cv_data)
 
-            return str(current_data) if current_data else None
+            return str(current_data) if current_data is not None else None
 
         except (KeyError, IndexError, TypeError):
             return None
-
 
     def _join_skills(self, data):
         if not isinstance(data, list):
@@ -259,14 +228,14 @@ class FormDetector:
     
         return f"{degree} - {institution}"
     
-    def _apply_transform(self, data: Any, transform_name: str, full_cv_data: Dict[str, Any]) -> str:
-       transform_function = self.transforms.get(transform_name)
-       if transform_function:
-           try:
-               return transform_function(data)
-           except Exception:
-               return ''
-       return str(data) if data else ''
+    def _apply_transform(self, data: Any, transform_name: str, full_cv_data: Optional[Dict[str, Any]] = None) -> str:
+        transform_function = self.transforms.get(transform_name)
+        if transform_function:
+            try:
+                return transform_function(data)
+            except Exception:
+                return ''
+        return str(data) if data else ''
        
 
 if __name__ == "__main__":

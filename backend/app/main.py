@@ -1,6 +1,6 @@
 from fastapi import FastAPI, UploadFile, File, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 import tempfile
 import os
 from pathlib import Path
@@ -9,6 +9,7 @@ from typing import List, Dict, Any
 from app.services.llm_service import LLMService, CVData
 from app.services.pdf_parser import DocumentParser
 from app.services.form_detector import FormDetector
+from anyio import to_thread
 
 app = FastAPI(title="Smells Like Job Spirit API", version="1.0.0")
 
@@ -33,6 +34,12 @@ class FormFieldData(BaseModel):
     placeholder: str = ''
     id: str = ''
     required: bool = False
+    className: str = ''  # React-style className
+    class_: str = Field('', alias='class')
+
+    class Config:
+        allow_population_by_field_name = True
+        allow_population_by_alias = True
 
 
 class FormMappingRequest(BaseModel):
@@ -52,7 +59,7 @@ async def parse_cv(file: UploadFile = File(...)):
     if file_ext not in document_parser.supported_formats:
         raise HTTPException(
                 status_code=400,
-                detail=f"Unsupported file format. Suported: {document_parser.supported_formats}"
+                detail=f"Unsupported file format. Supported: {document_parser.supported_formats}"
                 )
 
     # Save uploaded file temporarily
@@ -95,7 +102,7 @@ async def generate_mappings(request: FormMappingRequest):
         }
     
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error generating mappings: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error generating mappings: {str(e)}") from e
 
 
 @app.get("/api/health")
@@ -103,11 +110,12 @@ async def health_check():
     """Health check endpoint"""
 
     try:
-        test_response = llm_service._call_ollama("Test connection")
+        test_response = await to_thread.run_sync(llm_service._call_ollama, "Test connection")
         return {"status": "healthy", "llm_connected": True}
 
     except Exception:
         return {"status": "unhealthy", "llm_connected": False}
+
 
 @app.post("/api/fill_form")
 async def fill_form(form_data: dict):
