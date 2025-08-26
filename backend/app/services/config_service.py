@@ -1,7 +1,7 @@
 import json
 import sqlite3
 from typing import Optional
-from typing import List, Any, Dict
+from typing import Any, Dict
 
 from app.models.config import SiteConfiguration, UserPreferences
 
@@ -138,7 +138,7 @@ class Configuration:
         db_channel.commit()
         db_channel.close()
 
-    def get_learned_mappings(self, domain: str) -> List[Dict[str, Any]]:
+    def get_learned_mappings(self, domain: str) -> list[Dict[str, Any]]:
         db_channel = sqlite3.connect(self.db_path)
         cursor = db_channel.cursor()
 

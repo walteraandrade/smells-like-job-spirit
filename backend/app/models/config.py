@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field
-from typing import Dict, List, Optional
+from typing import Optional
 from enum import Enum
 
 
@@ -33,21 +33,21 @@ class UserPreferences(BaseModel):
     confirmation_required: bool = True
     min_confidence_threshold: float = 0.7
     preferred_language: str = "en"
-    custom_field_mappings: Dict[str, str] = Field(default_factory=dict)
-    excluded_sites: List[str] = Field(default_factory=list)
+    custom_field_mappings: dict[str, str] = Field(default_factory=dict)
+    excluded_sites: list[str] = Field(default_factory=list)
     debug_mode: bool = False
 
 
 class SiteConfiguration(BaseModel):
     domain: str
-    custom_selectors: Dict[str, str] = Field(default_factory=dict)
-    field_overrides: Dict[str, FieldMapping] = Field(default_factory=dict)
+    custom_selectors: dict[str, str] = Field(default_factory=dict)
+    field_overrides: dict[str, FieldMapping] = Field(default_factory=dict)
     is_enabled: bool = True
     notes: str = ""
 
 
 class AppConfiguration(BaseModel):
     user_preferences: UserPreferences
-    site_configurations: List[SiteConfiguration] = Field(default_factory=list)
-    field_mappings: List[FieldMapping] = Field(default_factory=list)
+    site_configurations: list[SiteConfiguration] = Field(default_factory=list)
+    field_mappings: list[FieldMapping] = Field(default_factory=list)
     version: str = "1.0.0"

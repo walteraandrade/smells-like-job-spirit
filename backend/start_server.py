@@ -4,14 +4,14 @@ import time
 import requests
 
 
-def check_ollama():
+def check_ollama() -> bool:
     """Check if Ollama is running and start if needed"""
 
     try:
         requests.get("http://localhost:11434/api/tags", timeout=5)
         print("✅ Ollama is running!")
         return True
-    except request.exceptions.RequestException:
+    except requests.exceptions.RequestException:
         print("❌ Ollama is not running or is running in another port")
         print("Trying to start Ollama...")
 

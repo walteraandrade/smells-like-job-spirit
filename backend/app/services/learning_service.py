@@ -1,4 +1,4 @@
-from typing import Dict, Optional, Any, Tuple
+from typing import Optional, Any, Tuple
 
 from collections import defaultdict
 from app.services.config_service import Configuration
@@ -13,7 +13,7 @@ class Learning:
     def record_user_correction(
         self,
         domain: str,
-        field_info: Dict[str, Any],
+        field_info: dict[str, Any],
         suggested_mapping: str,
         user_mapping: str,
         confidence: float,
@@ -40,7 +40,7 @@ class Learning:
         self.config_service.learn_field_mapping(domain, field_name, mapping, confidence)
 
     def improve_field_classification(
-        self, domain: str, field_info: Dict[str, Any]
+        self, domain: str, field_info: dict[str, Any]
     ) -> Tuple[Optional[str], float]:
         learned_mappings = self.config_service.get_learned_mappings(domain)
 
@@ -66,7 +66,7 @@ class Learning:
         return None, 0.0
 
     def _calculate_similarity_score(
-        self, field_info: Dict[str, Any], learned_mapping: Dict[str, Any]
+        self, field_info: dict[str, Any], learned_mapping: dict[str, Any]
     ) -> float:
         field_text = f"{field_info.get('name', '')} {field_info.get('label', '')} {field_info.get('placeholder', '')}".lower()
         mapping_field = learned_mapping["field_name"].lower()
@@ -88,7 +88,7 @@ class Learning:
 
         return min(jaccard_score, 1.0)
 
-    def get_domain_statistics(self, domain: str) -> Dict[str, Any]:
+    def get_domain_statistics(self, domain: str) -> dict[str, Any]:
         learned_mappings = self.config_service.get_learned_mappings(domain)
 
         return {
@@ -108,14 +108,14 @@ class Learning:
             "domain": domain,
         }
 
-    def export_learned_data(self, domain: str = None) -> Dict[str, Any]:
+    def export_learned_data(self, domain: str = None) -> dict[str, Any]:
         if domain:
             mappings = self.config_service.get_learned_mappings(domain)
             return {"domain": domain, "mappings": mappings}
 
         return {"message": "Full export not implemented yet"}
 
-    def import_learned_data(self, data: Dict[str, Any]) -> None:
+    def import_learned_data(self, data: dict[str, Any]) -> None:
         domain = data.get("domain")
         mappings = data.get("mappings", [])
 

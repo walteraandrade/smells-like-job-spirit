@@ -1,11 +1,12 @@
 import requests
 import json
 import logging
-from typing import Dict, Any, Optional
+from typing import Any, Optional
 from pydantic import BaseModel
 
+
 class CVData(BaseModel):
-    personal_info: Dict[str, Any]
+    personal_info: dict[str, Any]
     education: list
     experience: list
     skills: list
@@ -97,25 +98,21 @@ CV Text:
 JSON Response:
     """
 
-    def _call_ollama(self, prompt: str) -> str: 
+    def _call_ollama(self, prompt: str) -> str:
         """Make API call to local Ollama instance."""
         url = f"{self.base_url}/api/generate"
         data = {
-                "model": self.model,
-                "prompt": prompt,
-                "stream": False,
-                "options": {
-                    "temperature": 0.1,
-                    "top_p": 0.9,
-                    "num_predict": 2048
-                    }
-                }
+            "model": self.model,
+            "prompt": prompt,
+            "stream": False,
+            "options": {"temperature": 0.1, "top_p": 0.9, "num_predict": 2048},
+        }
 
         response = requests.post(url, json=data, timeout=120)
         response.raise_for_status()
         return response.json()["response"]
 
-    def _extract_json_from_response(self, response: str) -> Dict[str, Any]:
+    def _extract_json_from_response(self, response: str) -> dict[str, Any]:
         """Extrat JSON from LLM response, handling potential formatting issues"""
         # Find JSON content between braces
         start_idx = response.find("{")
