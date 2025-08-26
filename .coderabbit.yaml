@@ -295,8 +295,8 @@ reviews:
     github-checks:
 
       # Enable GitHub Checks
-			| Enable integration, defaults to true
-			| Enable GitHub Checks integration.
+		#	| Enable integration, defaults to true
+		#	| Enable GitHub Checks integration.
       # Default: true
       enabled: true
 

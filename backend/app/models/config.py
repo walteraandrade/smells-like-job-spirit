@@ -1,6 +1,7 @@
-from pydantic import BaseModel
-from typing import Dict, List, Optional, Any
+from pydantic import BaseModel, Field
+from typing import Dict, List, Optional
 from enum import Enum
+
 
 class FieldType(str, Enum):
     TEXT = "text"
@@ -11,10 +12,12 @@ class FieldType(str, Enum):
     SELECT = "select"
     DATE = "date"
 
+
 class ConfidenceLevel(str, Enum):
     LOW = "low"
     MEDIUM = "medium"
     HIGH = "high"
+
 
 class FieldMapping(BaseModel):
     field_name: str
@@ -24,24 +27,27 @@ class FieldMapping(BaseModel):
     field_type: FieldType
     is_required: bool = False
 
+
 class UserPreferences(BaseModel):
     auto_fill_enabled: bool = True
     confirmation_required: bool = True
     min_confidence_threshold: float = 0.7
     preferred_language: str = "en"
-    custom_field_mappings: Dict[str, str] = {}
-    excluded_sites: List[str] = []
+    custom_field_mappings: Dict[str, str] = Field(default_factory=dict)
+    excluded_sites: List[str] = Field(default_factory=list)
     debug_mode: bool = False
+
 
 class SiteConfiguration(BaseModel):
     domain: str
-    custom_selectors: Dict[str, str] = {}
-    field_overrides: Dict[str, FieldMapping] = {}
+    custom_selectors: Dict[str, str] = Field(default_factory=dict)
+    field_overrides: Dict[str, FieldMapping] = Field(default_factory=dict)
     is_enabled: bool = True
     notes: str = ""
 
+
 class AppConfiguration(BaseModel):
     user_preferences: UserPreferences
-    site_configurations: List[SiteConfiguration] = []
-    field_mappings: List[FieldMapping] = []
+    site_configurations: List[SiteConfiguration] = Field(default_factory=list)
+    field_mappings: List[FieldMapping] = Field(default_factory=list)
     version: str = "1.0.0"

@@ -1,7 +1,7 @@
 import json
 import sqlite3
 from pathlib import Path
-from typing import Optional, Dict, List
+from typing import Optional
 
 from app.models.config import AppConfiguration, SiteConfiguration, UserPreferences
 
@@ -20,6 +20,18 @@ class Configuration:
             CREATE TABLE IF NOT EXISTS user_preferences (
                 id INTEGER PRIMARY KEY,
                 preferences_json TEXT NOT NULL,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """
+        )
+
+        cursor.execute(
+            """
+            CREATE TABLE IF NOT EXISTS site_configurations (
+                id INTEGER PRIMARY KEY,
+                domain TEXT UNIQUE NOT NULL,
+                config_json TEXT NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         """

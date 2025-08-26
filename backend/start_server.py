@@ -2,7 +2,6 @@ import subprocess
 import sys
 import time
 import requests
-from pathlib import Path
 
 
 def check_ollama():
@@ -16,13 +15,15 @@ def check_ollama():
         print("❌ Ollama is not running or is running in another port")
         print("Trying to start Ollama...")
 
-        # Start Ollama in the background
         subprocess.Popen(
-            ["ollama", "serve"], sdout=subprocess.DEVNULL, stderr=subprocess.DEVLNULL
+            ["ollama", "serve"],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            start_new_session=True,
+            close_fds=True,
         )
 
-        # Wait for Ollama to start
-        for i in range(30):  # Wait up 30s
+        for i in range(30):
             try:
                 requests.get("http://localhost:11434/api/tags", timout=2)
                 print("✅ Ollama started successfully")
@@ -70,7 +71,8 @@ def start_api_server():
             "0.0.0.0",
             "--port",
             "8000",
-        ]
+        ],
+        check=True,
     )
 
 
