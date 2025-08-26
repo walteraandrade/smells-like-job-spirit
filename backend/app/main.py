@@ -42,7 +42,19 @@ class FormMappingRequest(BaseModel):
 
 @app.post("/api/parse-cv", response_model=CVData)
 async def parse_cv(file: UploadFile = File(...)):
-    """Parse uploaded file and return structured data"""
+    """
+    Parse an uploaded resume/CV file and return structured CV data.
+    
+    Accepts a file upload (UploadFile) whose extension must be one of document_parser.supported_formats.
+    The file is saved to a temporary file for text extraction; the temporary file is always removed before returning.
+    
+    Returns:
+        CVData: Structured CV information produced by llm_service.parse_cv.
+    
+    Raises:
+        HTTPException(400): If no file is provided or the file extension is not supported.
+        HTTPException(422): If text extraction from the document fails or the LLM cannot parse the CV content.
+    """
 
     # Validate file type
     if not file.filename:
@@ -80,7 +92,27 @@ async def parse_cv(file: UploadFile = File(...)):
 
 @app.post("/api/generate-mappings")
 async def generate_mappings(request: FormMappingRequest):
-    """Generate mappings between CV data and form fields"""
+    """
+    Generate mappings between CV data and provided form fields.
+    
+    Takes a FormMappingRequest containing parsed CV data and a list of form fields, and returns a mapping result that links form field names to matching CV values.
+    
+    Parameters:
+        request (FormMappingRequest): Contains `cv_data` (dict of parsed CV attributes) and `form_fields` (list of form field descriptors).
+    
+    Returns:
+        dict: {
+            "success": bool,
+            "mappings": dict,            # mapped form field -> CV key/value
+            "unmapped_fields": list,     # form fields with no confident match
+            "confidence_scores": dict,   # per-field confidence scores
+            "total_fields": int,
+            "mapped_fields": int
+        }
+    
+    Raises:
+        HTTPException: with status_code=500 if mapping generation fails.
+    """
     try:
         form_fields_dict = [field.dict() for field in request.form_fields]
         mappings = form_detector.generate_field_mapping(request.cv_data, form_fields_dict)
@@ -100,7 +132,14 @@ async def generate_mappings(request: FormMappingRequest):
 
 @app.get("/api/health")
 async def health_check():
-    """Health check endpoint"""
+    """
+    Check application health by verifying connectivity to the LLM.
+    
+    Attempts a lightweight call to the configured LLM service. Returns a dict indicating overall health and whether the LLM connection succeeded.
+    
+    Returns:
+        dict: {"status": "healthy" | "unhealthy", "llm_connected": bool}
+    """
 
     try:
         test_response = llm_service._call_ollama("Test connection")

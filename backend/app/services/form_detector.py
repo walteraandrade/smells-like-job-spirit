@@ -24,6 +24,11 @@ class FormMapping:
 class FormDetector:
 
     def __init__(self):
+        """
+        Initialize a FormDetector instance.
+        
+        Sets up regex classification patterns, a mapping of classification keys to transform names, and registers transform functions used when extracting and formatting CV data for form fields.
+        """
         self.classification_patterns = self._initialize_patterns()
         self.common_transforms = self._initialize_transforms()
         self.transforms = {
@@ -33,6 +38,14 @@ class FormDetector:
         }
 
     def _initialize_patterns(self) -> Dict[str, List[re.Pattern]]:
+        """
+        Return a mapping of CV classification keys to compiled regular-expression patterns used to identify form fields.
+        
+        Each dictionary key is a canonical CV path or classification (e.g., 'personal_info.full_name', 'experience[0].company', 'skills_text'). The associated value is a list of case-insensitive compiled `re.Pattern` objects that match likely form attribute text (field name, id, label, placeholder, class, etc.) for that classification. Patterns are intended for fuzzy matching of common field label variants and are used by the classifier to compute confidence scores for field-to-CV mappings.
+        
+        Returns:
+            Dict[str, List[re.Pattern]]: Mapping from classification keys to lists of compiled regex patterns.
+        """
         return {
                 'personal_info.full_name': [
                     re.compile(r'full?.name|name(?!.*email)(?!.*user)', re.I),
@@ -90,6 +103,17 @@ class FormDetector:
 
 
     def _initialize_transforms(self) -> Dict[str, str]:
+            """
+            Return a mapping from internal classification keys to transform function names.
+            
+            The detector uses these keys to look up and apply named transforms when extracted CV data
+            needs formatting (for example, joining skills or formatting experience/education entries).
+            
+            Returns:
+                Dict[str, str]: Mapping where keys are classification identifiers (e.g., 'skills_text',
+                'experience_summary', 'education_summary') and values are the names of transform functions
+                implemented on the detector (e.g., 'join_skills', 'format_experience', 'format_education').
+            """
             return {
                         'skills_text': 'join_skills',
                         'experience_summary': 'format_experience',
@@ -97,6 +121,17 @@ class FormDetector:
                             }
 
     def classify_fields(self, field_data: List[Dict[str, Any]]) -> List[FormMapping]:
+        """
+        Classify a list of detected form field attribute dictionaries and produce FormMapping entries for high-confidence matches.
+        
+        Takes a list of form field attribute dicts (each typically containing keys like 'name', 'type', 'label', 'placeholder', etc.), wraps each in a FormField, and uses internal pattern matching to determine the best CV path classification and confidence. For each field with a classification and confidence > 0.5, returns a FormMapping linking the field name to the matched CV path and any registered transform name.
+        
+        Parameters:
+            field_data (List[Dict[str, Any]]): List of form field attribute dictionaries to classify.
+        
+        Returns:
+            List[FormMapping]: Mappings for fields with a confident classification (confidence > 0.5). Each mapping contains the form field name, the matched CV path, an optional transform function name (from the detector's transform registry), and the confidence score.
+        """
         mappings = []
         
         for field in field_data:
@@ -121,6 +156,11 @@ class FormDetector:
 
     
     def _classify_single_field(self, field: FormField) -> tuple[Optional[str], float]:
+        """
+        Determine the best-matching classification key for a detected form field.
+        
+        Inspects the field's textual attributes (name, id, placeholder, label, className, class), combines them into a single search string, and scores that text against the detector's classification_patterns. Returns the classification key with the highest confidence and that confidence score (float between 0.0 and 1.0). If no pattern matches, returns (None, 0.0).
+        """
         text_attributes = [
             field.name,
             field.attributes.get('id', ''),
@@ -144,6 +184,23 @@ class FormDetector:
         return best_classification, best_confidence
 
     def _calculate_pattern_confidence(self, text: str, patterns: List[re.Pattern]) -> float:
+        """
+        Calculate a confidence score indicating how well any of the given regex patterns match the provided text.
+        
+        Detailed behavior:
+        - Returns 0.0 if `text` is empty or no pattern matches.
+        - For each pattern that matches, a base confidence of 0.8 is assigned.
+          - If the matched substring equals the full input `text` (case-insensitive, ignoring surrounding whitespace), confidence is 1.0.
+          - Otherwise, if the matched substring appears as a whole word within `text` (case-insensitive), confidence is 0.9.
+        - The method returns the highest confidence observed across all patterns.
+        
+        Parameters:
+            text (str): The combined text attributes of a form field (e.g., name, id, label, placeholder).
+            patterns (List[re.Pattern]): Compiled regular expression patterns used to identify a classification.
+        
+        Returns:
+            float: A confidence score in [0.0, 1.0], where higher means a stronger match.
+        """
         if not text:
             return 0.0
 
@@ -164,6 +221,25 @@ class FormDetector:
 
 
     def generate_field_mapping(self, cv_data: Dict[str, Any], form_fields: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """
+        Build a mapping between detected form fields and values extracted from a CV.
+        
+        Given parsed CV data and a list of detected form field descriptors, classify form fields (via classify_fields), extract corresponding CV values (applying any configured transforms), and return a summary containing successful mappings, fields that remained unmapped, and per-field confidence scores.
+        
+        Parameters:
+            cv_data (Dict[str, Any]): Nested CV data (dicts/lists) used as the source of values.
+            form_fields (List[Dict[str, Any]]): List of form field descriptors (each may include keys like 'name', 'type', 'label', 'placeholder', etc.).
+        
+        Returns:
+            Dict[str, Any]: A dictionary with three keys:
+                - 'mappings': List of mapping dicts for fields where a CV value was found. Each mapping contains:
+                    - 'field_name': name attribute of the form field
+                    - 'cv_path': classification key/path used to extract the value from cv_data
+                    - 'value': the extracted (and possibly transformed) string value
+                    - 'confidence': classifier confidence for this mapping
+                - 'unmapped_fields': List of form field descriptors (subset of input fields) that were not mapped; each entry includes 'name', 'type', 'label', and 'placeholder'.
+                - 'confidence_scores': Dict mapping form field names to their classification confidence (float).
+        """
         mappings = self.classify_fields(form_fields)
                     
         result = {
@@ -203,6 +279,22 @@ class FormDetector:
 
 
     def _extract_cv_value(self, cv_data: Dict[str, Any], cv_path: str, transform_function: Optional[str] = None) -> Optional[str]:
+        """
+        Extract a value from nested CV data by a dot/bracket path and optionally apply a named transform.
+        
+        The `cv_path` may use dot notation and/or bracketed numeric indices (e.g. "experience[0].company" or "personal_info.name").
+        The function traverses the nested dict/list structure in `cv_data` following the path. If `transform_function` is provided and the resolved value
+        is a list or dict, the named transform is applied via self._apply_transform and its result is returned.
+        
+        Parameters:
+            cv_data (Dict[str, Any]): Nested CV data (dictionaries and lists) to extract from.
+            cv_path (str): Path to the desired value using dots and/or bracketed indices.
+            transform_function (Optional[str]): Optional name of a transform to apply when the extracted value is a list or dict.
+        
+        Returns:
+            Optional[str]: The extracted (and possibly transformed) value as a string, or None if the path cannot be resolved,
+            the resolved value is empty/falsey, or an extraction error occurs.
+        """
         try:
             if '[' in cv_path:
                 cv_path = re.sub(r'\[(\d+)\]', r'.\1', cv_path)
@@ -228,6 +320,20 @@ class FormDetector:
 
 
     def _join_skills(self, data):
+        """
+        Join skills from a list of category objects into a single comma-separated string.
+        
+        Each category is expected to be a dict containing an 'items' key with a list of skill strings.
+        Categories with empty or missing 'items' are ignored. If `data` is not a list or no skills
+        are found, an empty string is returned.
+        
+        Parameters:
+            data (list[dict]): List of categories, each typically like {"items": ["skill1", "skill2"]}.
+        
+        Returns:
+            str: Comma-separated skills, with skills from each category grouped and categories separated by commas,
+                 or an empty string if input is invalid or contains no skills.
+        """
         if not isinstance(data, list):
             return ''
     
@@ -241,6 +347,12 @@ class FormDetector:
         return ', '.join(skill_lists)
 
     def _format_experience(self, data):
+        """
+        Format an experience entry into a single human-readable string.
+        
+        Expects `data` to be a dict containing 'job_title' and 'company'. Returns "<job_title> at <company>".
+        If `data` is not a dict or keys are missing/empty, returns an empty string.
+        """
         if not isinstance(data, dict):
             return ''
     
@@ -251,6 +363,17 @@ class FormDetector:
 
 
     def _format_education(self, data):
+        """
+        Format an education record into a single human-readable string.
+        
+        Given an education object, returns "<degree> - <institution>". If `data` is not a dict or either key is missing/empty, empty strings are used in place of missing parts; if `data` is not a dict the function returns an empty string.
+        
+        Parameters:
+            data (dict): Education record expected to contain 'degree' and 'institution' keys.
+        
+        Returns:
+            str: Formatted education string or an empty string for invalid input.
+        """
         if not isinstance(data, dict):
             return ''
     
@@ -260,6 +383,19 @@ class FormDetector:
         return f"{degree} - {institution}"
     
     def _apply_transform(self, data: Any, transform_name: str, full_cv_data: Dict[str, Any]) -> str:
+       """
+       Apply a named transform to `data` and return the result as a string.
+       
+       Looks up a callable in self.transforms by `transform_name` and calls it with `data`. If the transform raises any exception the method returns an empty string. If no transform is found, returns str(data) if `data` is truthy, otherwise an empty string.
+       
+       Parameters:
+           data: The value to be transformed.
+           transform_name (str): Key naming the transform to apply.
+           full_cv_data (dict): The full CV data passed to the caller; not used by this method but included for transform compatibility.
+       
+       Returns:
+           str: Transformed string, empty string on error or when no meaningful value is available.
+       """
        transform_function = self.transforms.get(transform_name)
        if transform_function:
            try:
