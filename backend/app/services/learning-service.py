@@ -1,0 +1,110 @@
+from typing import Dict, List, Any, Tuple
+import numpy as np
+
+from collections import defaultdict
+from app.services.config_service import Configuration
+
+class Learning:
+    def __init__(self, config_service: Configuration):
+        self.config_service = config_service
+        self.feedback_data = defaultdict(list)
+
+
+    def record_user_correction(self, domain: str, field_info: Dict[str, Any], suggested_mapping: str, user_mapping: str, confidence: float):
+        feedback = {
+            'domain': domain,
+            'field_name': field_info.get('name', ''),
+            'field_type': field_info.get('type', ''),
+            'field_label': field_info.get('label', ''),
+            'field_placeholder': field_info.get('placeholder', ''),
+            'suggested_mapping': suggested_mapping,
+            'correct_mapping': user_mapping,
+            'original_confidence': confidence
+                }
+
+        self.feedback_data[domain].append(feedback)
+        self.config_service.learn_field_mapping(domain, field_info.get('name', ''), user_mapping, 1.0)
+
+    
+    def record_successfull_fill(self, domain: str, field_name: str, mapping: str, confidence: float):
+        self.config_service.learn_field_mapping(domain, field_name, mapping, confidence)
+
+    
+    def improve_field_classification(self, domain: str, field_info: Dict[str, Any]) -> Tuple[str, float]:
+        learned_mappings = self.config_service.get_learned_mappings(domain)
+
+        field_name = field_info.get('name', '').lower()
+        field_label = field_info.get('label', '').lower()
+        field_placeholder = field_info.get('placeholder', '').lower()
+
+        for mapping in learned_mappings:
+            if mapping['field_name'].lower() == field_name:
+                return mapping['cv_path'], min(mapping['confidence'] * 1.2, 1.0)
+
+        best_match = None
+        best_score = 0.0
+
+        for mapping in learned_mappings:
+            score = self._calculate_similarity_score(field_info, mapping)
+            if score > best_score and score > 0.3:
+                best_score = score
+                best_match = mapping
+
+        if best_match:
+            adjusted_confidence = best_match['confidence'] * best_score
+            return best_match['cv_path'], adjusted_confidence
+
+        return None, 0.0
+
+
+    def _calculate_similarity_score(self, field_info: Dict[str, Any], learned_mapping: Dict[str, Any]) -> float:
+        field_text = f"{field_info.get('name', '')} {field_info.get('label', '')} {field_info.get('placeholder', '')}".lower()
+        mapping_field = learned_mapping['field_name'].lower()
+
+        field_words = set(field_text.split())
+        mapping_words = set(mapping_field.split())
+
+        if not field_words or not mapping_words:
+            return 0.0
+
+        intersection = field_words.intersection(mapping_words)
+        union = field_words.union(mapping_words)
+
+        if mapping_field in field_text or any(word in field_text for word in mapping_words):
+            jaccard_score *= 1.5
+
+        return min(jaccard_score, 1.0)
+
+
+    def get_domain_statistics(self, domain: str) -> Dict[str, Any]:
+        learned_mappings = self.config_service.get_learned_mappings(domain)
+
+        return {
+            'total_learned_mappings': len(learned_mappings),
+            'most_common_fields': [
+                {'field': mapping['field_name'], 'usage_count': mapping('usage_count')}
+                for mapping in learned_mappings[:10]
+                ],
+            'average_confidence': np.mean([m['confidence'] for m in learned_mappings]) if learned_mappings else 0.0,
+            'domain': domain
+                }
+
+    def export_learned_data(self, domain: str = None) -> Dict[str, Any]:
+        if domain:
+            mappings = self.config_service.get_learned_mappings(domains)
+            return {'domain': domain, 'mappings': mappings }
+        else:
+            return {'message': 'Full export not implemented yet'}
+
+    
+    def import_learned_data(self, data: Dict[str, Any]):
+        domain = data.get('domain')
+        mappings = data.get('mappings', [])
+
+        for mapping in mappings:
+            self.config_service.learn_field_mapping(
+                    domain,
+                    mapping['field_name'],
+                    mapping['cv_path'],
+                    mapping['confidence']
+                    )

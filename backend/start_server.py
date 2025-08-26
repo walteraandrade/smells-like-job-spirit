@@ -4,6 +4,7 @@ import time
 import requests
 from pathlib import Path
 
+
 def check_ollama():
     """Check if Ollama is runnning and start if needed"""
 
@@ -16,10 +17,12 @@ def check_ollama():
         print("Trying to start Ollama...")
 
         # Start Ollama in the background
-        subprocess.Popen(["ollama", "serve"], sdout=subprocess.DEVNULL, stderr=subprocess.DEVLNULL)
+        subprocess.Popen(
+            ["ollama", "serve"], sdout=subprocess.DEVNULL, stderr=subprocess.DEVLNULL
+        )
 
         # Wait for Ollama to start
-        for i in range(30): # Wait up 30s
+        for i in range(30):  # Wait up 30s
             try:
                 requests.get("http://localhost:11434/api/tags", timout=2)
                 print("✅ Ollama started successfully")
@@ -29,6 +32,7 @@ def check_ollama():
 
         print("❌ Failed to start Ollama, are you sure it is installed correctly?")
         return False
+
 
 def check_model():
     """Check if required model is available"""
@@ -51,10 +55,24 @@ def check_model():
         print(f"❌ Error checking model: {e}")
         return False
 
+
 def start_api_server():
     """Start the API Server"""
     print("Starting Smells Like Job Spirit API server...")
-    subprocess.run([sys.executable, "-m", "uvicorn", "app.main:app", "--reload", "--host", "0.0.0.0", "--port", "8000"])
+    subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "uvicorn",
+            "app.main:app",
+            "--reload",
+            "--host",
+            "0.0.0.0",
+            "--port",
+            "8000",
+        ]
+    )
+
 
 if __name__ == "__main__":
     print("🚀 Starting Smells Like Job Spirit Backend...")
