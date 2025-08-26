@@ -1,9 +1,8 @@
 {
 	"manifest_version": 3,
-	"name": "Smart CV Autofill Assistant",
+	"name": "Smells Like Job Spirit",
 	"version": "1.0.0",
 	"description": "Automatically fill job application forms using your CV data",
-
 	"permissions": ["activeTab", "storage", "tabs"],
 	"host_permissions": ["http://localhost:8000/*", "https://*/*"],
 	"background": {
@@ -20,13 +19,12 @@
 
 	"action": {
 		"default_popup": "popup/popup.html",
-		"default_title": "CV Autofill Assistant"
+		"default_title": "Smells Like Job Spirit"
 	},
 
 	"icons": {
 		"16": "assets/icon.png"
 	},
-
 	"web_accessible_resources": [
 		{
 			"resources": ["content/*"],

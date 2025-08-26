@@ -5,7 +5,7 @@ echo "🚀 Installing CV Autofill Extension..."
 
 # Check if we're in the right directory
 if [ ! -f "manifest.json" ]; then
-    echo "❌ Error: manifest.json not found. Make sure you're in the browser-extension directory."
+    echo "❌ Error: manifest.json not found. Make sure you're in the browser-ext directory."
     exit 1
 fi
 

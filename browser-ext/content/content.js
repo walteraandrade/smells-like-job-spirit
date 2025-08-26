@@ -1,5 +1,3 @@
-import { Patterns } from "./form-field.patterns.js";
-
 if (
   typeof browser !== "undefined" &&
   (!window.chrome || !window.chrome.runtime)
@@ -34,11 +32,9 @@ class AutofillContent {
     if (document.readyState === "loading") {
       document.addEventListener("DOMContentLoaded", () => {
         this.detectForms();
-        this.observeFormMutations();
       });
     } else {
-      this.detectForms();
-      this.observeFormMutations();
+      this.observeFormMutations(); 
     }
   }
 
@@ -236,7 +232,33 @@ class AutofillContent {
     if (ariaLabel) text += ` ${ariaLabel}`;
     if (ariaLabelledBy) text += ` ${ariaLabelledBy}`;
 
-    for (const [classification, pattern] of Object.entries(Patterns)) {
+    const patterns = {
+      first_name: /first.?name|fname|given.?name/,
+      last_name: /last.?name|lname|surname|family.?name/,
+      full_name: /\bfull.?name\b|\bname\b(?!.*\b(?:email|user(?:name)?)\b)/,
+      email: /email|e.?mail/,
+      phone: /phone|tel|mobile|cell/,
+      address: /address|addr(?!ess)/,
+      city: /city|town/,
+      state: /state(?!ment)|province|region/,
+      zip: /\b(?:zip(?:\s*code)?|postal(?:\s*code)?)\b/,
+      country: /country|nation/,
+      company: /company|organization|employer/,
+      position: /position|title|job.?title|role/,
+      website: /\b(?:website|url|homepage)\b/,
+      linkedin: /linkedin|linked\.in/,
+      github: /github|git\.hub/,
+      experience: /\b(?:experience|exp|years?\s+of\s+experience|yoe)\b/,
+      education: /education|degree|school|university|college/,
+      skills: /\b(?:skills?|competenc\w*)\b/,
+      cover_letter: /cover.?letter|motivation|why/,
+      salary: /salary|compensation|pay|wage/,
+      date: /\b(?:date|dob|start(?:\s*date)?|end(?:\s*date)?|available\s*from)\b/,
+    };
+
+    Object.freeze(patterns);
+
+    for (const [classification, pattern] of Object.entries(patterns)) {
       if (pattern.test(text)) {
         return classification;
       }
@@ -347,87 +369,117 @@ class AutofillContent {
   getValueForField(classification, cvData, fieldInfo = {}) {
     const mappings = {
       first_name: () => {
-        const fullName = cvData?.personal_info?.fullName?.trim?.() || "";
+        const fullName =
+          (
+            cvData?.personal_info?.full_name || cvData?.personal_info?.fullName
+          )?.trim() || "";
         const parts = fullName.split(/\s+/);
         return parts.length > 0 ? parts[0] : "";
       },
       last_name: () => {
-        const fullName = cvData?.personal_info?.fullName?.trim?.() || "";
+        const fullName =
+          (
+            cvData?.personal_info?.full_name || cvData?.personal_info?.fullName
+          )?.trim() || "";
         const parts = fullName.split(/\s+/);
-        return parts.length > 1 ? parts[parts.length - 1] : "";
+        return parts.length > 1 ? parts.slice(1).join(" ") : "";
       },
-      full_name: () => cvData?.personal_info?.fullName?.trim?.() || "",
+      full_name: () =>
+        (
+          cvData?.personal_info?.full_name || cvData?.personal_info?.fullName
+        )?.trim() || "",
       email: () => {
         const emails = cvData?.contact_info?.emails || [];
+        const primaryEmail = cvData?.personal_info?.email || "";
+        if (primaryEmail) return primaryEmail;
         return Array.isArray(emails)
           ? emails[emails.length - 1]?.value || ""
           : "";
       },
       phone: () => {
         const phones = cvData?.contact_info?.phones || [];
+        const primaryPhone = cvData?.personal_info?.phone || "";
+        if (primaryPhone) return primaryPhone;
         return Array.isArray(phones)
           ? phones[phones.length - 1]?.value || ""
           : "";
       },
-      address: () => cvData?.contact_info?.address?.trim?.() || "",
-      city: () => cvData?.contact_info?.city?.trim?.() || "",
-      country: () => cvData?.contact_info?.country?.trim?.() || "",
+      address: () =>
+        (cvData?.personal_info?.address || cvData?.contact_info?.address)?.trim() ||
+        "",
+      city: () =>
+        (cvData?.personal_info?.city || cvData?.contact_info?.city)?.trim() || "",
+      country: () =>
+        (cvData?.personal_info?.country || cvData?.contact_info?.country)?.trim() ||
+        "",
       state: () =>
-        cvData?.contact_info?.state?.trim?.() ||
-        cvData?.contact_info?.region?.trim?.() ||
+        (cvData?.personal_info?.state || cvData?.contact_info?.state)?.trim() ||
+        (
+          cvData?.personal_info?.region || cvData?.contact_info?.region
+        )?.trim() ||
         "",
       zip: () =>
         (
-          cvData?.contact_info?.postalCode ?? cvData?.contact_info?.zip
-        )?.toString?.() || "",
+          cvData?.personal_info?.postalCode ??
+          cvData?.contact_info?.postalCode ??
+          cvData?.personal_info?.zip ??
+          cvData?.contact_info?.zip
+        )?.toString() || "",
       company: () => {
-        const experiences = cvData?.work_experience || [];
+        const experiences = cvData?.experience || cvData?.work_experience || [];
         return Array.isArray(experiences)
-          ? experiences[experiences.length - 1]?.company?.trim?.() || ""
+          ? experiences[0]?.company?.trim() || ""
           : "";
       },
       position: () => {
-        const experiences = cvData?.work_experience || [];
+        const experiences = cvData?.experience || cvData?.work_experience || [];
         return Array.isArray(experiences)
-          ? experiences[experiences.length - 1]?.position?.trim?.() || ""
+          ? (experiences[0]?.job_title || experiences[0]?.position)?.trim() ||
+              ""
           : "";
       },
       website: () =>
-        cvData?.social_links?.website?.trim?.() ||
-        cvData?.personal_info?.website?.trim?.() ||
-        "",
+        (
+          cvData?.personal_info?.website || cvData?.social_links?.website
+        )?.trim() || "",
       education: () => {
         const education = cvData?.education || [];
         return Array.isArray(education)
           ? education
-              .map((e) => e?.institution?.trim?.())
+              .map((e) => e?.institution?.trim() || "")
               .filter(Boolean)
               .join(", ")
           : "";
       },
-      linkedin: () => cvData?.social_links?.linkedin?.trim?.() || "",
-      github: () => cvData?.social_links?.github?.trim?.() || "",
+      linkedin: () =>
+        (
+          cvData?.personal_info?.linkedin || cvData?.social_links?.linkedin
+        )?.trim() || "",
+      github: () =>
+        (cvData?.personal_info?.github || cvData?.social_links?.github)?.trim() ||
+        "",
       experience: () => {
-        const experiences = Array.isArray(cvData?.work_experience)
-          ? cvData.work_experience
-          : [];
-        return experiences
-          .map((e) => [e?.position, e?.company].filter(Boolean).join(" @ "))
-          .filter(Boolean)
-          .join("; ");
+        const experiences = cvData?.experience || cvData?.work_experience || [];
+        return Array.isArray(experiences)
+          ? experiences
+              .map((e) =>
+                [(e?.job_title || e?.position), e?.company]
+                  .filter(Boolean)
+                  .join(" @ ")
+              )
+              .filter(Boolean)
+              .join("; ")
+          : "";
       },
       skills: () => {
         const raw = cvData?.skills || [];
-        const allSkills = Array.isArray(raw)
-          ? raw
-              .flatMap((s) => (typeof s === "string" ? s : s?.item))
-              .filter(Boolean)
-          : [];
-        return allSkills.join(", ");
+        if (Array.isArray(raw)) {
+          return raw.flatMap((s) => s.items || s).join(", ");
+        }
+        return "";
       },
       cover_letter: () =>
-        cvData?.cover_letter?.trim?.() ||
-        cvData?.application?.coverLetter?.trim?.() ||
+        (cvData?.cover_letter || cvData?.application?.coverLetter)?.trim() ||
         "",
       salary: () => {
         const desired =
@@ -442,12 +494,13 @@ class AutofillContent {
         const labelText = `${fieldInfo.label || ""} ${
           fieldInfo.name || ""
         }`.toLowerCase();
+        const experiences = cvData?.experience || cvData?.work_experience || [];
         if (labelText.includes("dob") || labelText.includes("birth")) {
           return cvData?.personal_info?.dob || "";
         } else if (labelText.includes("start")) {
-          return cvData?.work_experience?.[0]?.start_date || "";
+          return experiences?.[0]?.start_date || "";
         } else if (labelText.includes("end")) {
-          return cvData?.work_experience?.[0]?.end_date || "";
+          return experiences?.[0]?.end_date || "";
         } else if (labelText.includes("available")) {
           return cvData?.availability?.from || "";
         }
@@ -568,7 +621,6 @@ class AutofillContent {
       full_name: "Full Name",
       skills: "Skills",
     };
-    console.log("Field mappings initialized");
     return mappings;
   }
 

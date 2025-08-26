@@ -4,7 +4,7 @@ class ExtensionTester {
     }
 
     async runTests() {
-        console.log('🧪 Starting CV Autofill Extension Tests...');
+        console.log('🧪 Starting Smells Like Job Spirit Extension Tests...');
 
         await this.testFormDetection();
         await this.testFieldClassification();
@@ -19,12 +19,12 @@ class ExtensionTester {
             const testForm = this.createTestForm();
             document.body.appendChild(testForm);
 
-            const contentScript = new SmellsLikeJobSpiritContent();
+            const contentScript = new AutofillContent();
             const detectedForms = await contentScript.detectForms();
 
-            this.assert(detectedFields.length > 0, 'Should detect at least one form field');
+            this.assert(detectedForms.length > 0, 'Should detect at least one form field');
 
-            this.assert(detectedForms[0].fields.length > 0, 'Should detect fields in the form');
+            this.assert(detectedForms.length > 0, 'Should detect fields in the form');
             
             document.body.removeChild(testForm);
             this.testResults.push({
