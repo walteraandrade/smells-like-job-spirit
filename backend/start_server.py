@@ -2,39 +2,44 @@ import subprocess
 import sys
 import time
 import requests
-from pathlib import Path
 
-def check_ollama():
-    """Check if Ollama is runnning and start if needed"""
+
+def check_ollama() -> bool:
+    """Check if Ollama is running and start if needed"""
 
     try:
         requests.get("http://localhost:11434/api/tags", timeout=5)
         print("✅ Ollama is running!")
         return True
-    except request.exceptions.ConnectionError:
+    except requests.exceptions.RequestException:
         print("❌ Ollama is not running or is running in another port")
         print("Trying to start Ollama...")
 
-        # Start Ollama in the background
-        subprocess.Popen(["ollama", "serve"], sdout=subprocess.DEVNULL, stderr=subprocess.DEVLNULL)
+        subprocess.Popen(
+            ["ollama", "serve"],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            start_new_session=True,
+            close_fds=True,
+        )
 
-        # Wait for Ollama to start
-        for i in range(30): # Wait up 30s
+        for i in range(30):
             try:
-                requests.get("http://localhost:11434/api/tags", timout=2)
+                requests.get("http://localhost:11434/api/tags", timeout=2)
                 print("✅ Ollama started successfully")
                 return True
-            except requests.exceptions.ConnectionError:
+            except requests.exceptions.RequestException:
                 time.sleep(1)
 
         print("❌ Failed to start Ollama, are you sure it is installed correctly?")
         return False
 
+
 def check_model():
     """Check if required model is available"""
 
     try:
-        response = requests.get("http://localhost:11434/api/tags")
+        response = requests.get("http://localhost:11434/api/tags", timeout=5)
         models = response.json().get("models", [])
 
         for model in models:
@@ -44,17 +49,36 @@ def check_model():
 
         print("❌ Llama 3.1 8B model not found")
         print("Installing model... (this may take a few minutes)")
-        subprocess.run(["ollama", "pull", "llama3.1:8b"])
+        subprocess.run(["ollama", "pull", "llama3.1:8b"], check=True)
+        verify = requests.get("http://localhost:11434/api/tags", timeout=10).json()
+        if any("llama3.1:8b" in m.get("name", "") for m in verify.get("models", [])):
+            return True
+        print("❌ Model pull did not complete successfully")
         return True
 
     except Exception as e:
         print(f"❌ Error checking model: {e}")
         return False
 
-def start_api_server():
+
+def start_api_server() -> None:
     """Start the API Server"""
     print("Starting Smells Like Job Spirit API server...")
-    subprocess.run([sys.executable, "-m", "uvicorn", "app.main:app", "--reload", "--host", "0.0.0.0", "--port", "8000"])
+    subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "uvicorn",
+            "app.main:app",
+            "--reload",
+            "--host",
+            "0.0.0.0",
+            "--port",
+            "8000",
+        ],
+        check=True,
+    )
+
 
 if __name__ == "__main__":
     print("🚀 Starting Smells Like Job Spirit Backend...")
