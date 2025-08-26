@@ -297,6 +297,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - [Meta AI](https://ai.meta.com/) - For the Llama 3.1 model
 - [FastAPI](https://fastapi.tiangolo.com/) - For the excellent Python web framework
 - [The open-source community](https://github.com/) - For countless tools and libraries
+- [CodeRabbit](https://www.coderabbit.ai) - For great improvements and fixes via PR review.
 
 ## 📞 Support
 
