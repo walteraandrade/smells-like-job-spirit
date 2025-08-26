@@ -1,12 +1,12 @@
 from typing import Dict, Optional, Any, Tuple
-import numpy as np
 
 from collections import defaultdict
 from app.services.config_service import Configuration
+from statistics import fmean
 
 
 class Learning:
-    def __init__(self, config_service: Configuration):
+    def __init__(self, config_service: Configuration) -> None:
         self.config_service = config_service
         self.feedback_data = defaultdict(list)
 
@@ -17,7 +17,7 @@ class Learning:
         suggested_mapping: str,
         user_mapping: str,
         confidence: float,
-    ):
+    ) -> None:
         feedback = {
             "domain": domain,
             "field_name": field_info.get("name", ""),
@@ -36,7 +36,7 @@ class Learning:
 
     def record_successfull_fill(
         self, domain: str, field_name: str, mapping: str, confidence: float
-    ):
+    ) -> None:
         self.config_service.learn_field_mapping(domain, field_name, mapping, confidence)
 
     def improve_field_classification(
@@ -101,7 +101,7 @@ class Learning:
                 for mapping in learned_mappings[:10]
             ],
             "average_confidence": (
-                np.mean([m["confidence"] for m in learned_mappings])
+                fmean([m["confidence"] for m in learned_mappings])
                 if learned_mappings
                 else 0.0
             ),
@@ -112,14 +112,14 @@ class Learning:
         if domain:
             mappings = self.config_service.get_learned_mappings(domain)
             return {"domain": domain, "mappings": mappings}
-        else:
-            return {"message": "Full export not implemented yet"}
 
-    def import_learned_data(self, data: Dict[str, Any]):
+        return {"message": "Full export not implemented yet"}
+
+    def import_learned_data(self, data: Dict[str, Any]) -> None:
         domain = data.get("domain")
         mappings = data.get("mappings", [])
 
         for mapping in mappings:
-            self.config_service.learn_field_mapping(
+            self.config_service.learn_field_mappings(
                 domain, mapping["field_name"], mapping["cv_path"], mapping["confidence"]
             )

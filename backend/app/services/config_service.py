@@ -1,9 +1,9 @@
 import json
 import sqlite3
-from pathlib import Path
 from typing import Optional
+from typing import List, Any, Dict
 
-from app.models.config import AppConfiguration, SiteConfiguration, UserPreferences
+from app.models.config import SiteConfiguration, UserPreferences
 
 
 class Configuration:
@@ -108,6 +108,39 @@ class Configuration:
     def save_site_configuration(self, config: SiteConfiguration):
         db_channel = sqlite3.connect(self.db_path)
         cursor = db_channel.cursor()
+        config_json = config.json()
+
+        cursor.execute(
+            """
+            INSERT OR REPLACE INTO site_configurations (domain, config_json)
+            VALUES (?, ?)
+        """,
+            (config.domain, config_json),
+        )
+
+        db_channel.commit()
+        db_channel.close()
+
+    def learn_field_mappings(
+        self, domain: str, field_name: str, cv_path: str, confidence: float
+    ):
+        db_channel = sqlite3.connect(self.db_path)
+        cursor = db_channel.cursor()
+
+        cursor.execute(
+            """
+            INSERT INTO field_mappings (domain, field_name, cv_path, confidence)
+            VALUES (?, ?, ?, ?)
+        """,
+            (domain, field_name, cv_path, confidence),
+        )
+
+        db_channel.commit()
+        db_channel.close()
+
+    def get_learned_mappings(self, domain: str) -> List[Dict[str, Any]]:
+        db_channel = sqlite3.connect(self.db_path)
+        cursor = db_channel.cursor()
 
         cursor.execute(
             """
@@ -118,7 +151,7 @@ class Configuration:
             HAVING avg_confidence > 0.5
             ORDER BY usage_count DESC, avg_confidence DESC
         """,
-            (config.domain,),
+            (domain,),
         )
 
         results = cursor.fetchall()

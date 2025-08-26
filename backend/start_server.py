@@ -5,13 +5,13 @@ import requests
 
 
 def check_ollama():
-    """Check if Ollama is runnning and start if needed"""
+    """Check if Ollama is running and start if needed"""
 
     try:
         requests.get("http://localhost:11434/api/tags", timeout=5)
         print("✅ Ollama is running!")
         return True
-    except request.exceptions.ConnectionError:
+    except request.exceptions.RequestException:
         print("❌ Ollama is not running or is running in another port")
         print("Trying to start Ollama...")
 
@@ -25,10 +25,10 @@ def check_ollama():
 
         for i in range(30):
             try:
-                requests.get("http://localhost:11434/api/tags", timout=2)
+                requests.get("http://localhost:11434/api/tags", timeout=2)
                 print("✅ Ollama started successfully")
                 return True
-            except requests.exceptions.ConnectionError:
+            except requests.exceptions.RequestException:
                 time.sleep(1)
 
         print("❌ Failed to start Ollama, are you sure it is installed correctly?")
@@ -39,7 +39,7 @@ def check_model():
     """Check if required model is available"""
 
     try:
-        response = requests.get("http://localhost:11434/api/tags")
+        response = requests.get("http://localhost:11434/api/tags", timeout=5)
         models = response.json().get("models", [])
 
         for model in models:
@@ -49,7 +49,11 @@ def check_model():
 
         print("❌ Llama 3.1 8B model not found")
         print("Installing model... (this may take a few minutes)")
-        subprocess.run(["ollama", "pull", "llama3.1:8b"])
+        subprocess.run(["ollama", "pull", "llama3.1:8b"], check=True)
+        verify = requests.get("http://localhost:11434/api/tags", timeout=10).json()
+        if any("llama3.1:8b" in m.get("name", "") for m in verify.get("models", [])):
+            return True
+        print("❌ Model pull did not complete successfully")
         return True
 
     except Exception as e:
@@ -57,7 +61,7 @@ def check_model():
         return False
 
 
-def start_api_server():
+def start_api_server() -> None:
     """Start the API Server"""
     print("Starting Smells Like Job Spirit API server...")
     subprocess.run(
