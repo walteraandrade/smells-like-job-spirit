@@ -1,11 +1,14 @@
 from fastapi import FastAPI, UploadFile, File, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
 import tempfile
 import os
 from pathlib import Path
+from typing import List, Dict, Any
 
 from app.services.llm_service import LLMService, CVData
 from app.services.pdf_parser import DocumentParser
+from app.services.form_detector import FormDetector
 
 app = FastAPI(title="Smells Like Job Spirit API", version="1.0.0")
 
@@ -21,6 +24,21 @@ app.add_middleware(
 # Initialize services
 llm_service = LLMService()
 document_parser = DocumentParser()
+form_detector = FormDetector()
+
+class FormFieldData(BaseModel):
+    name: str
+    type: str
+    label: str = ''
+    placeholder: str = ''
+    id: str = ''
+    required: bool = False
+
+
+class FormMappingRequest(BaseModel):
+    cv_data: Dict[str, Any]
+    form_fields: List[FormFieldData]
+    
 
 @app.post("/api/parse-cv", response_model=CVData)
 async def parse_cv(file: UploadFile = File(...)):
@@ -40,12 +58,12 @@ async def parse_cv(file: UploadFile = File(...)):
     # Save uploaded file temporarily
     with tempfile.NamedTemporaryFile(delete=False, suffix=file_ext) as temp_file:
         content = await file.read()
-        tmp_file.write(content)
-        tmp_file.flush()
+        temp_file.write(content)
+        temp_file.flush()
 
         try:
             # Extract text from document
-            cv_text = document_parser.extract_text(tmp_file.name)
+            cv_text = document_parser.extract_text(temp_file.name)
             if not cv_text:
                 raise HTTPException(status_code=422, detail="Could not extract text from file")
 
@@ -57,7 +75,28 @@ async def parse_cv(file: UploadFile = File(...)):
             return parsed_data
 
         finally:
-            os.unlink(tmp_file.name)
+            os.unlink(temp_file.name)
+            
+
+@app.post("/api/generate-mappings")
+async def generate_from_mappings(request: FormMappingRequest):
+    """Generate mappings between CV data and form fields"""
+    try:
+        form_fields_dict = [fild.dict() for fild in request.form_fields]
+        mappings = form_detector.generate_mappings(request.cv_data, form_fields_dict)
+        
+        return {
+            "success": True,
+            "mappings": mappings["mappings"],
+            "unmatched_fields": mappings["unmatched_fields"],
+            "confidence_scores": mappings["confidence_scores"],
+            "total_fields": len(request.form_fields),
+            "mapped_fields": len(mappings["mappings"]),
+        }
+    
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error generating mappings: {str(e)}")
+
 
 @app.get("/api/health")
 async def health_check():
